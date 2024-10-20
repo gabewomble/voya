@@ -1,57 +1,38 @@
-# Simple Makefile for a Go project
+include .env
+# ==================================================================================== #
+# HELPERS
+# ==================================================================================== #
 
-# Build the application
-all: build
+## help: print this help message
+.PHONY: help
+help:
+	@echo 'Usage:'
+	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' |  sed -e 's/^/ /'
 
-build:
-	@echo "Building..."
-	
-	
-	@go build -o main cmd/api/main.go
+.PHONY: confirm
+confirm:
+	@echo -n 'Are you sure? [y/N] ' && read ans && [ $${ans:-N} = y ]
 
-# Run the application
+# ==================================================================================== #
+# DEVELOPMENT
+# ==================================================================================== #
+
+## run: Run the application
 run:
 	@go run cmd/api/main.go
 
-
-# Create DB container
-docker-run:
-	@if docker compose up 2>/dev/null; then \
-		: ; \
-	else \
-		echo "Falling back to Docker Compose V1"; \
-		docker-compose up; \
-	fi
-
-# Shutdown DB container
-docker-down:
-	@if docker compose down 2>/dev/null; then \
-		: ; \
-	else \
-		echo "Falling back to Docker Compose V1"; \
-		docker-compose down; \
-	fi
-
-
-# Test the application
+## test: Test the application
 test:
 	@echo "Testing..."
 	@go test ./... -v
 
 
-# Integrations Tests for the application
+## itest: Integrations Tests for the application
 itest:
 	@echo "Running integration tests..."
 	@go test ./internal/database -v
 
-
-# Clean the binary
-clean:
-	@echo "Cleaning..."
-	@rm -f main
-
-# Live Reload
-
+## watch: Live Reload
 watch:
 	@if command -v air > /dev/null; then \
             air; \
@@ -68,5 +49,97 @@ watch:
             fi; \
         fi
 
+# ==================================================================================== #
+# DATABASE
+# ==================================================================================== #
 
-.PHONY: all build run test clean watch
+## db/psql: Connect to the DB
+.PHONY: db/psql
+db/psql:
+	psql ${DB_DSN}
+
+## db/migrations/new name=$1: create a new database migration
+.PHONY: db/migrations/new
+db/migrations/new:
+	@echo 'Creating migration files for ${name}...'
+	migrate create -seq -ext=.sql -dir=./internal/database/migrations ${name}
+
+## db/migrations/up: apply all up database migrations
+.PHONY: db/migrations/up
+db/migrations/up: confirm
+	@echo 'Running up migrations...'
+	migrate -path ./internal/database/migrations -database postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/${DB_DATABASE} up
+
+## db/migrations/down: apply all up database migrations
+.PHONY: db/migrations/down
+db/migrations/down: confirm
+	@echo 'Running down migrations...'
+	migrate -path ./internal/database/migrations -database postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/${DB_DATABASE} down
+
+# ==================================================================================== #
+# BUILD
+# ==================================================================================== #
+
+## all: Build the application
+.PHONY: all
+all: build
+
+.PHONY: build
+build:
+	@echo "Building...";
+	@templ generate;
+	@npm run tailwind;
+	@go build -o main cmd/api/main.go;
+
+## clean: Clean the binary
+.PHONY: clean
+clean:
+	@echo "Cleaning..."
+	@rm -f main
+
+# ==================================================================================== #
+# QUALITY CONTROL
+# ==================================================================================== #
+
+## audit: tidy dependencies and format, vet and test all code
+.PHONY: audit
+audit: vendor
+	@echo 'Formatting code...'
+	go fmt ./...
+	templ fmt ./cmd/web
+	@echo 'Vetting code...'
+	go vet ./...
+	staticcheck ./...
+	@echo 'Running tests...'
+	go test -race -vet=off ./...
+
+## vendor: tidy and vendor dependencies
+.PHONY: vendor
+vendor:
+	@echo 'Tidying and verifying module dependencies...'
+	go mod tidy
+	go mod verify
+	@echo 'Vendoring dependencies...'
+	go mod vendor
+
+# ==================================================================================== #
+# DOCKER
+# ==================================================================================== #
+
+## docker-run: Create DB container
+docker-run:
+	@if docker compose up 2>/dev/null; then \
+		: ; \
+	else \
+		echo "Falling back to Docker Compose V1"; \
+		docker-compose up; \
+	fi
+
+## docker-down: Shutdown DB container
+docker-down:
+	@if docker compose down 2>/dev/null; then \
+		: ; \
+	else \
+		echo "Falling back to Docker Compose V1"; \
+		docker-compose down; \
+	fi
