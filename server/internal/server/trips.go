@@ -8,6 +8,8 @@ import (
 	"server/internal/validator"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 func (s *Server) listTripsHandler (c *gin.Context) {
@@ -36,7 +38,7 @@ func (s *Server) createTripHandler(c *gin.Context) {
 	v := validator.New()
 
 	if validator.ValidateTrip(v, &input); !v.Valid() {
-		c.JSON(http.StatusBadRequest, gin.H{"errors": v.Errors, "error": errors.New("form is not valid") })
+		c.JSON(http.StatusBadRequest, gin.H{"errors": v.Errors, "error": "form is not valid" })
 		return
 	}
 
@@ -46,5 +48,28 @@ func (s *Server) createTripHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 
+	s.logger.LogInfo(c, fmt.Sprintf("trip created: %s", trip.ID.String()))
+
 	c.Redirect(http.StatusCreated, fmt.Sprintf("/trips/%d", trip.ID))
+}
+
+func (s *Server) getTripByIdHandler(c *gin.Context) {
+	tripID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	trip, err := s.db.Queries().GetTripById(c, tripID)
+	if err != nil {
+		switch {
+			case errors.Is(err, pgx.ErrNoRows):
+				c.JSON(http.StatusNotFound, gin.H{"error": "trip not found"})
+			default:
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusFound, gin.H{"trip": trip})
 }

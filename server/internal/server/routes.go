@@ -20,6 +20,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// Trips
 	r.GET("/trips", s.listTripsHandler)
 	r.POST("/trips", s.createTripHandler)
+	r.GET("/trips/:id", s.getTripByIdHandler)
 
 	return r
 }

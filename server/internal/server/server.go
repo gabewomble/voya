@@ -10,12 +10,14 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 
 	"server/internal/database"
+	"server/internal/logger"
 )
 
 type Server struct {
 	port int
 
 	db database.Service
+	logger *logger.Logger
 }
 
 func NewServer() *http.Server {
@@ -24,6 +26,7 @@ func NewServer() *http.Server {
 		port: port,
 
 		db: database.New(),
+		logger: logger.New(),
 	}
 
 	// Declare Server config
