@@ -2,13 +2,14 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
+	"server/internal/repository"
 	"strconv"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
 )
@@ -22,10 +23,12 @@ type Service interface {
 	// Close terminates the database connection.
 	// It returns an error if the connection cannot be closed.
 	Close() error
+
+	Queries() *repository.Queries
 }
 
 type service struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
 var (
@@ -36,6 +39,7 @@ var (
 	host       = os.Getenv("DB_HOST")
 	schema     = os.Getenv("DB_SCHEMA")
 	dbInstance *service
+	queries *repository.Queries
 )
 
 func New() Service {
@@ -44,14 +48,32 @@ func New() Service {
 		return dbInstance
 	}
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", username, password, host, port, database, schema)
-	db, err := sql.Open("pgx", connStr)
+
+	config, err := pgxpool.ParseConfig(connStr)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Unable to parse database URL: %v\n", err)
 	}
+
+	db, err := pgxpool.NewWithConfig(context.Background(), config)
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v\n", err)
+	}
+
 	dbInstance = &service{
 		db: db,
 	}
+
 	return dbInstance
+}
+
+func (s *service) Queries() *repository.Queries {
+	if queries != nil {
+		return queries
+	}
+
+	queries = repository.New(s.db);
+
+	return queries
 }
 
 // Health checks the health of the database connection by pinging the database.
@@ -63,7 +85,7 @@ func (s *service) Health() map[string]string {
 	stats := make(map[string]string)
 
 	// Ping the database
-	err := s.db.PingContext(ctx)
+	err := s.db.Ping(ctx)
 	if err != nil {
 		stats["status"] = "down"
 		stats["error"] = fmt.Sprintf("db down: %v", err)
@@ -76,30 +98,20 @@ func (s *service) Health() map[string]string {
 	stats["message"] = "It's healthy"
 
 	// Get database stats (like open connections, in use, idle, etc.)
-	dbStats := s.db.Stats()
-	stats["open_connections"] = strconv.Itoa(dbStats.OpenConnections)
-	stats["in_use"] = strconv.Itoa(dbStats.InUse)
-	stats["idle"] = strconv.Itoa(dbStats.Idle)
-	stats["wait_count"] = strconv.FormatInt(dbStats.WaitCount, 10)
-	stats["wait_duration"] = dbStats.WaitDuration.String()
-	stats["max_idle_closed"] = strconv.FormatInt(dbStats.MaxIdleClosed, 10)
-	stats["max_lifetime_closed"] = strconv.FormatInt(dbStats.MaxLifetimeClosed, 10)
+		// Get pool stats from pgxpool
+	poolStats := s.db.Stat()
+	stats["total_connections"] = strconv.Itoa(int(poolStats.TotalConns()))
+	stats["idle_connections"] = strconv.Itoa(int(poolStats.IdleConns()))
+	stats["acquired_connections"] = strconv.Itoa(int(poolStats.AcquiredConns()))
+	stats["max_connections"] = strconv.Itoa(int(poolStats.MaxConns()))
 
 	// Evaluate stats to provide a health message
-	if dbStats.OpenConnections > 40 { // Assuming 50 is the max for this example
+	if poolStats.TotalConns() > 40 { // Assuming 50 is the max for this example
 		stats["message"] = "The database is experiencing heavy load."
 	}
 
-	if dbStats.WaitCount > 1000 {
-		stats["message"] = "The database has a high number of wait events, indicating potential bottlenecks."
-	}
-
-	if dbStats.MaxIdleClosed > int64(dbStats.OpenConnections)/2 {
-		stats["message"] = "Many idle connections are being closed, consider revising the connection pool settings."
-	}
-
-	if dbStats.MaxLifetimeClosed > int64(dbStats.OpenConnections)/2 {
-		stats["message"] = "Many connections are being closed due to max lifetime, consider increasing max lifetime or revising the connection usage pattern."
+	if poolStats.AcquiredConns() > 30 {
+		stats["message"] = "The database has a high number of acquired connections, indicating potential bottlenecks."
 	}
 
 	return stats
@@ -111,5 +123,6 @@ func (s *service) Health() map[string]string {
 // If an error occurs while closing the connection, it returns the error.
 func (s *service) Close() error {
 	log.Printf("Disconnected from database: %s", database)
-	return s.db.Close()
+	s.db.Close()
+	return nil
 }

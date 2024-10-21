@@ -53,28 +53,28 @@ watch:
 # DATABASE
 # ==================================================================================== #
 
-## db/psql: Connect to the DB
-.PHONY: db/psql
-db/psql:
-	psql ${DB_DSN}
+## db/sql/gen: Generate repository package from sql queries
+.PHONY: db/sql/gen
+db/sql/gen:
+	@sqlc generate
 
 ## db/migrations/new name=$1: create a new database migration
 .PHONY: db/migrations/new
 db/migrations/new:
 	@echo 'Creating migration files for ${name}...'
-	migrate create -seq -ext=.sql -dir=./internal/database/migrations ${name}
+	migrate create -seq -ext=.sql -dir=./migrations ${name}
 
 ## db/migrations/up: apply all up database migrations
 .PHONY: db/migrations/up
 db/migrations/up: confirm
 	@echo 'Running up migrations...'
-	migrate -path ./internal/database/migrations -database postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/${DB_DATABASE} up
+	migrate -path ./migrations -database postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/${DB_DATABASE} up
 
 ## db/migrations/down: apply all up database migrations
 .PHONY: db/migrations/down
 db/migrations/down: confirm
 	@echo 'Running down migrations...'
-	migrate -path ./internal/database/migrations -database postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/${DB_DATABASE} down
+	migrate -path ./migrations -database postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/${DB_DATABASE} down
 
 # ==================================================================================== #
 # BUILD
@@ -87,8 +87,6 @@ all: build
 .PHONY: build
 build:
 	@echo "Building...";
-	@templ generate;
-	@npm run tailwind;
 	@go build -o main cmd/api/main.go;
 
 ## clean: Clean the binary

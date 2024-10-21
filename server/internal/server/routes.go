@@ -9,9 +9,17 @@ import (
 func (s *Server) RegisterRoutes() http.Handler {
 	r := gin.Default()
 
+	r.Use(gin.Logger())
+
+	r.Use(gin.Recovery())
+
 	r.GET("/", s.HelloWorldHandler)
 
 	r.GET("/health", s.healthHandler)
+
+	// Trips
+	r.GET("/trips", s.listTripsHandler)
+	r.POST("/trips", s.createTripHandler)
 
 	return r
 }
