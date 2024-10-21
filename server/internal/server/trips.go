@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (s *Server) listTripsHandler (c *gin.Context) {
+func (s *Server) listTripsHandler(c *gin.Context) {
 	trips, err := s.db.Queries().ListTrips(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -72,4 +72,26 @@ func (s *Server) getTripByIdHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusFound, gin.H{"trip": trip})
+}
+
+func (s *Server) deleteTripByIdHandler(c *gin.Context) {
+	tripID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	_, err = s.db.Queries().GetTripById(c, tripID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = s.db.Queries().DeleteTripById(c, tripID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
