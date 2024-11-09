@@ -1,8 +1,11 @@
-package validator
+package data
 
-import "server/internal/repository"
+import (
+	"server/internal/repository"
+	"server/internal/validator"
+)
 
-func ValidateTrip(v *Validator, trip *repository.InsertTripParams) {
+func ValidateTrip(v *validator.Validator, trip *repository.InsertTripParams) {
 	v.Check(trip.Name != "", "name", "must be provided")
 	v.Check(len(trip.Name) <= 500, "name", "must not be more than 500 bytes long")
 
@@ -11,6 +14,6 @@ func ValidateTrip(v *Validator, trip *repository.InsertTripParams) {
 
 	_, hasError := v.Errors["description"]
 	if !hasError {
-		trip.Description.Valid = true;
+		trip.Description.Valid = true
 	}
 }

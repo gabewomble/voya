@@ -13,7 +13,10 @@ import (
 )
 
 const deleteTripById = `-- name: DeleteTripById :exec
-DELETE FROM trips WHERE id = $1
+DELETE FROM
+    trips
+WHERE
+    id = $1
 `
 
 func (q *Queries) DeleteTripById(ctx context.Context, id uuid.UUID) error {
@@ -22,7 +25,12 @@ func (q *Queries) DeleteTripById(ctx context.Context, id uuid.UUID) error {
 }
 
 const getTripById = `-- name: GetTripById :one
-SELECT id, name, description, start_date, end_date, created_at, updated_at FROM trips WHERE id = $1
+SELECT
+    id, name, description, start_date, end_date, created_at, updated_at
+FROM
+    trips
+WHERE
+    id = $1
 `
 
 func (q *Queries) GetTripById(ctx context.Context, id uuid.UUID) (Trip, error) {
@@ -41,7 +49,10 @@ func (q *Queries) GetTripById(ctx context.Context, id uuid.UUID) (Trip, error) {
 }
 
 const insertTrip = `-- name: InsertTrip :one
-INSERT INTO trips (name, description) VALUES ($1, $2) RETURNING id, name, description, start_date, end_date, created_at, updated_at
+INSERT INTO
+    trips (name, description)
+VALUES
+    ($1, $2) RETURNING id, name, description, start_date, end_date, created_at, updated_at
 `
 
 type InsertTripParams struct {
@@ -65,7 +76,10 @@ func (q *Queries) InsertTrip(ctx context.Context, arg InsertTripParams) (Trip, e
 }
 
 const listTrips = `-- name: ListTrips :many
-SELECT id, name, description, start_date, end_date, created_at, updated_at from trips
+SELECT
+    id, name, description, start_date, end_date, created_at, updated_at
+FROM
+    trips
 `
 
 func (q *Queries) ListTrips(ctx context.Context) ([]Trip, error) {

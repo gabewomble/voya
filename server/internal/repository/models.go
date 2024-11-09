@@ -18,3 +18,13 @@ type Trip struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
+
+type User struct {
+	ID           uuid.UUID          `json:"id"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	Name         string             `json:"name"`
+	Email        string             `json:"email"`
+	PasswordHash []byte             `json:"password_hash"`
+	Activated    bool               `json:"activated"`
+	Version      int32              `json:"version"`
+}

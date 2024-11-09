@@ -53,9 +53,16 @@ watch:
 # DATABASE
 # ==================================================================================== #
 
+## db/sql/fmt: Formats sql files
+.PHONY: db/sql/fmt
+db/sql/fmt:
+	@echo 'Formatting sql files...'
+	sleek ./queries/*.sql ./migrations/*.*.sql
+
 ## db/sql/gen: Generate repository package from sql queries
 .PHONY: db/sql/gen
 db/sql/gen:
+	@echo 'Generating repository package from sql queries'
 	@sqlc generate
 
 ## db/migrations/new name=$1: create a new database migration
@@ -99,12 +106,16 @@ clean:
 # QUALITY CONTROL
 # ==================================================================================== #
 
-## audit: tidy dependencies and format, vet and test all code
-.PHONY: audit
-audit: vendor
+## fmt: format code
+.PHONY: fmt
+fmt: db/sql/fmt
 	@echo 'Formatting code...'
 	go fmt ./...
-	templ fmt ./cmd/web
+
+
+## audit: tidy dependencies and format, vet and test all code
+.PHONY: audit
+audit: vendor fmt
 	@echo 'Vetting code...'
 	go vet ./...
 	staticcheck ./...
@@ -125,6 +136,7 @@ vendor:
 # ==================================================================================== #
 
 ## docker-run: Create DB container
+.PHONY: docker-run
 docker-run:
 	@if docker compose up 2>/dev/null; then \
 		: ; \
@@ -134,6 +146,7 @@ docker-run:
 	fi
 
 ## docker-down: Shutdown DB container
+.PHONY: docker-down
 docker-down:
 	@if docker compose down 2>/dev/null; then \
 		: ; \

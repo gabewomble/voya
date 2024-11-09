@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"server/internal/data"
 	"server/internal/repository"
 	"server/internal/validator"
 
@@ -23,7 +24,7 @@ func (s *Server) listTripsHandler(c *gin.Context) {
 		trips = make([]repository.Trip, 0)
 	}
 
-	c.JSON(http.StatusOK, gin.H{ "trips": trips })
+	c.JSON(http.StatusOK, gin.H{"trips": trips})
 }
 
 func (s *Server) createTripHandler(c *gin.Context) {
@@ -34,11 +35,10 @@ func (s *Server) createTripHandler(c *gin.Context) {
 		return
 	}
 
-
 	v := validator.New()
 
-	if validator.ValidateTrip(v, &input); !v.Valid() {
-		c.JSON(http.StatusBadRequest, gin.H{"errors": v.Errors, "error": "form is not valid" })
+	if data.ValidateTrip(v, &input); !v.Valid() {
+		c.JSON(http.StatusBadRequest, gin.H{"errors": v.Errors, "error": "form is not valid"})
 		return
 	}
 
@@ -63,10 +63,10 @@ func (s *Server) getTripByIdHandler(c *gin.Context) {
 	trip, err := s.db.Queries().GetTripById(c, tripID)
 	if err != nil {
 		switch {
-			case errors.Is(err, pgx.ErrNoRows):
-				c.JSON(http.StatusNotFound, gin.H{"error": "trip not found"})
-			default:
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		case errors.Is(err, pgx.ErrNoRows):
+			c.JSON(http.StatusNotFound, gin.H{"error": "trip not found"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
 		return
 	}

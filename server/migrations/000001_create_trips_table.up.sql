@@ -6,6 +6,6 @@ CREATE TABLE IF NOT EXISTS trips (
     description text,
     start_date date,
     end_date date,
-    created_at timestamp(0) with time zone NOT NULL DEFAULT NOW(),
-    updated_at timestamp(0) with time zone NOT NULL DEFAULT NOW()
+    created_at timestamp(0) WITH time zone NOT NULL DEFAULT NOW(),
+    updated_at timestamp(0) WITH time zone NOT NULL DEFAULT NOW()
 );

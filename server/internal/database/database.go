@@ -39,7 +39,7 @@ var (
 	host       = os.Getenv("DB_HOST")
 	schema     = os.Getenv("DB_SCHEMA")
 	dbInstance *service
-	queries *repository.Queries
+	queries    *repository.Queries
 )
 
 func New() Service {
@@ -71,7 +71,7 @@ func (s *service) Queries() *repository.Queries {
 		return queries
 	}
 
-	queries = repository.New(s.db);
+	queries = repository.New(s.db)
 
 	return queries
 }
@@ -98,7 +98,7 @@ func (s *service) Health() map[string]string {
 	stats["message"] = "It's healthy"
 
 	// Get database stats (like open connections, in use, idle, etc.)
-		// Get pool stats from pgxpool
+	// Get pool stats from pgxpool
 	poolStats := s.db.Stat()
 	stats["total_connections"] = strconv.Itoa(int(poolStats.TotalConns()))
 	stats["idle_connections"] = strconv.Itoa(int(poolStats.IdleConns()))
