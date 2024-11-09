@@ -23,7 +23,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.GET("/trips/:id", s.getTripByIdHandler)
 	r.DELETE("/trips/:id", s.deleteTripByIdHandler)
 
-	r.POST("/register", s.registerUserHandler)
+	r.POST("/users", s.registerUserHandler)
+
+	r.POST("/tokens/authenticate", s.createAuthTokenHandler)
 
 	return r
 }

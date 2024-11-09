@@ -7,9 +7,9 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const getUserByEmail = `-- name: GetUserByEmail :one
@@ -59,9 +59,9 @@ type InsertUserParams struct {
 }
 
 type InsertUserRow struct {
-	ID        uuid.UUID          `json:"id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	Version   int32              `json:"version"`
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	Version   int32     `json:"version"`
 }
 
 func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (InsertUserRow, error) {

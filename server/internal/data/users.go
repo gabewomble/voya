@@ -30,8 +30,8 @@ func (p *password) Set(plaintext string) error {
 	return nil
 }
 
-func (p password) Matches(plaintext string) (bool, error) {
-	err := bcrypt.CompareHashAndPassword(p.Hash, []byte(plaintext))
+func CompareUserHashAndPassword(hash []byte, pt string) (bool, error) {
+	err := bcrypt.CompareHashAndPassword(hash, []byte(pt))
 	if err != nil {
 		switch {
 		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
@@ -44,28 +44,28 @@ func (p password) Matches(plaintext string) (bool, error) {
 	return true, nil
 }
 
-func (u UserInput) validateEmail(v *validator.Validator) {
-	v.CheckStrNotEmpty(u.Email, "email")
-	v.Check(validator.Matches(u.Email, validator.EmailRX), "email", "must be a valid email address")
+func ValidateUserEmail(v *validator.Validator, email string) {
+	v.CheckStrNotEmpty(email, "email")
+	v.Check(validator.Matches(email, validator.EmailRX), "email", "must be a valid email address")
 }
 
-func (u UserInput) validatePasswordPlaintext(v *validator.Validator) {
-	v.CheckStrNotEmpty(*u.Password.plaintext, "password")
-	v.Check(len(*u.Password.plaintext) >= 8, "password", "must be at least 8 bytes long")
-	v.Check(len(*u.Password.plaintext) <= 72, "password", "must not be more than 72 bytes long")
+func ValidateUserPasswordPlaintext(v *validator.Validator, pt string) {
+	v.CheckStrNotEmpty(pt, "password")
+	v.Check(len(pt) >= 8, "password", "must be at least 8 bytes long")
+	v.Check(len(pt) <= 72, "password", "must not be more than 72 bytes long")
 }
 
-func (u UserInput) validateName(v *validator.Validator) {
-	v.CheckStrNotEmpty(u.Name, "name")
-	v.Check(len(u.Name) <= 500, "name", "must not be more than 500 bytes long")
+func ValidateUserName(v *validator.Validator, name string) {
+	v.CheckStrNotEmpty(name, "name")
+	v.Check(len(name) <= 500, "name", "must not be more than 500 bytes long")
 }
 
 func (u UserInput) Validate(v *validator.Validator) {
-	u.validateName(v)
-	u.validateEmail(v)
+	ValidateUserName(v, u.Name)
+	ValidateUserEmail(v, u.Email)
 
 	if u.Password.plaintext != nil {
-		u.validatePasswordPlaintext(v)
+		ValidateTokenPlaintext(v, *u.Password.plaintext)
 		if !v.Valid() {
 			return
 		}
