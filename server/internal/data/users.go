@@ -15,7 +15,7 @@ type UserInput struct {
 
 type password struct {
 	plaintext *string
-	hash      []byte
+	Hash      []byte
 }
 
 func (p *password) Set(plaintext string) error {
@@ -25,13 +25,13 @@ func (p *password) Set(plaintext string) error {
 	}
 
 	p.plaintext = &plaintext
-	p.hash = hash
+	p.Hash = hash
 
 	return nil
 }
 
 func (p password) Matches(plaintext string) (bool, error) {
-	err := bcrypt.CompareHashAndPassword(p.hash, []byte(plaintext))
+	err := bcrypt.CompareHashAndPassword(p.Hash, []byte(plaintext))
 	if err != nil {
 		switch {
 		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
@@ -71,7 +71,7 @@ func (u UserInput) Validate(v *validator.Validator) {
 		}
 	}
 
-	if u.Password.hash == nil {
+	if u.Password.Hash == nil {
 		panic("missing password hash for user")
 	}
 }
