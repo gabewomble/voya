@@ -50,7 +50,8 @@ func (s *Server) createTripHandler(c *gin.Context) {
 
 	s.logger.LogInfo(c, fmt.Sprintf("trip created: %s", trip.ID.String()))
 
-	c.Redirect(http.StatusCreated, fmt.Sprintf("/trips/%d", trip.ID))
+	c.Header("Location", fmt.Sprintf("/trips/%s", trip.ID))
+	c.JSON(http.StatusCreated, gin.H{"trip": trip})
 }
 
 func (s *Server) getTripByIdHandler(c *gin.Context) {
@@ -71,7 +72,7 @@ func (s *Server) getTripByIdHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusFound, gin.H{"trip": trip})
+	c.JSON(http.StatusOK, gin.H{"trip": trip})
 }
 
 func (s *Server) deleteTripByIdHandler(c *gin.Context) {
