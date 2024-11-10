@@ -32,3 +32,14 @@ export const requireAuth: RequestHandler = async ({
     throw redirect(303, "/login");
   }
 };
+
+export const requireNoAuth: RequestHandler = async ({
+  redirect,
+  sharedMap,
+}) => {
+  const user = sharedMap.get("user");
+
+  if (user) {
+    throw redirect(303, "/trips");
+  }
+};

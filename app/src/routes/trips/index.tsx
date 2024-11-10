@@ -13,22 +13,29 @@ export default component$(() => {
   const trips = useGetTrips();
   return (
     <>
-      <h1>Trips</h1>
-      <ul>
-        {trips.value.map((trip) => {
-          return (
-            <li key={trip.id}>
-              <a href={`/trips/${trip.id}`}>
-                <p>
-                  {trip.name}
-                  {" - "}
-                  <span>{trip.description}</span>
-                </p>
-              </a>
-            </li>
-          );
-        })}
-      </ul>
+      <div class="container mx-auto py-8">
+        <h1 class="mb-8 text-center text-4xl font-bold">Your Trips</h1>
+        <div class="mb-8 text-center">
+          <a href="/trips/new" class="btn btn-primary">
+            Create New Trip
+          </a>
+        </div>
+        <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+          {trips.value.map((trip) => (
+            <div key={trip.id} class="card bg-base-200 shadow-lg">
+              <div class="card-body">
+                <h2 class="card-title">{trip.name}</h2>
+                <p>{trip.description}</p>
+                <div class="card-actions justify-end">
+                  <a href={`/trips/${trip.id}`} class="btn btn-primary">
+                    View Details
+                  </a>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </>
   );
 });

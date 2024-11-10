@@ -3,11 +3,9 @@ import { Nav } from "./nav";
 
 export const Page = component$(() => {
   return (
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col">
       <Nav />
-      <div class="flex flex-col gap-4 px-8">
-        <Slot />
-      </div>
+      <Slot />
     </div>
   );
 });

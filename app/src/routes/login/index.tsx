@@ -1,6 +1,9 @@
 import { component$ } from "@builder.io/qwik";
 import { Form, routeAction$, z, zod$ } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
+import { requireNoAuth } from "~/middleware/auth";
+
+export const onGet = requireNoAuth;
 
 export const useLoginAction = routeAction$(
   async (data, request) => {
