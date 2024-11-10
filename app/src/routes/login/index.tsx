@@ -32,7 +32,6 @@ export const useLoginAction = routeAction$(
 
     request.cookie.set("token", token, {
       path: "/",
-      httpOnly: true,
       sameSite: true,
       secure: false,
     });

@@ -1,5 +1,5 @@
-import { createContextId } from "@builder.io/qwik";
+import { createContextId, type Signal } from "@builder.io/qwik";
 
-export const UserContext = createContextId<Record<string, unknown> | null>(
-  "User",
-);
+type User = Record<string, string> | null;
+
+export const UserContext = createContextId<Signal<User>>("User");

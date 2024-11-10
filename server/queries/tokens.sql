@@ -10,3 +10,9 @@ DELETE FROM
 WHERE
     scope = $1
     AND user_id = $2;
+
+-- name: DeleteToken :exec
+DELETE FROM
+    tokens
+WHERE
+    hash = @token_hash;

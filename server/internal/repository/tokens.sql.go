@@ -30,6 +30,18 @@ func (q *Queries) DeleteAllForUser(ctx context.Context, arg DeleteAllForUserPara
 	return err
 }
 
+const deleteToken = `-- name: DeleteToken :exec
+DELETE FROM
+    tokens
+WHERE
+    hash = $1
+`
+
+func (q *Queries) DeleteToken(ctx context.Context, tokenHash []byte) error {
+	_, err := q.db.Exec(ctx, deleteToken, tokenHash)
+	return err
+}
+
 const insertToken = `-- name: InsertToken :exec
 INSERT INTO
     tokens (hash, user_id, expiry, scope)

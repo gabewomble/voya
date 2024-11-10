@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"server/internal/data"
 	"server/internal/repository"
-	"server/internal/validator"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,28 +15,18 @@ func (s *Server) authenticate() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Vary", "Authorization")
 
-		authHeader := c.GetHeader("Authorization")
+		token, err := data.GetTokenPlainTextFromContext(c)
 
-		if authHeader == "" {
-			s.ctxSetUser(c, data.AnonymousUser)
-			c.Next()
-			return
-		}
-
-		headerParts := strings.Split(authHeader, " ")
-		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
-			s.invalidAuthTokenResponse(c)
-			c.Abort()
-			return
-		}
-
-		token := headerParts[1]
-
-		v := validator.New()
-
-		if data.ValidateTokenPlaintext(v, token); !v.Valid() {
-			s.invalidAuthTokenResponse(c)
-			c.Abort()
+		if err != nil {
+			s.logger.LogError(c, err)
+			switch {
+			case errors.Is(err, data.TokenErr.NotFound):
+				c.Next()
+			case errors.Is(err, data.TokenErr.InvalidToken):
+				s.invalidAuthTokenResponse(c)
+			default:
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			}
 			return
 		}
 
@@ -46,7 +34,7 @@ func (s *Server) authenticate() gin.HandlerFunc {
 
 		user, err := s.db.Queries().GetUserForToken(c, repository.GetUserForTokenParams{
 			TokenHash:   tokenHash[:],
-			TokenScope:  data.ScopeAuthentication,
+			TokenScope:  data.TokenScope.Authentication,
 			TokenExpiry: time.Now(),
 		})
 

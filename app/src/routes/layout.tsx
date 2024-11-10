@@ -1,4 +1,9 @@
-import { component$, Slot, useContextProvider } from "@builder.io/qwik";
+import {
+  component$,
+  Slot,
+  useContext,
+  useContextProvider,
+} from "@builder.io/qwik";
 import { Page } from "~/components";
 import { authenticate } from "~/middleware/auth";
 import { routeLoader$, type RequestHandler } from "@builder.io/qwik-city";
@@ -28,6 +33,8 @@ export default component$(() => {
   const userData = useUserData();
 
   useContextProvider(UserContext, userData);
+  // This is necessary for the value to be available on the client!
+  useContext(UserContext);
 
   return (
     <Page>

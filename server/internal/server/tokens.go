@@ -54,7 +54,7 @@ func (s *Server) createAuthTokenHandler(c *gin.Context) {
 		return
 	}
 
-	token, err := data.Token.New(data.Token{}, user.ID, 24*time.Hour, data.ScopeAuthentication)
+	token, err := data.Token.New(data.Token{}, user.ID, 24*time.Hour, data.TokenScope.Authentication)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -66,5 +66,29 @@ func (s *Server) createAuthTokenHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"token": token.Plaintext, "scope": data.ScopeAuthentication})
+	c.JSON(http.StatusCreated, gin.H{"token": token.Plaintext, "scope": data.TokenScope.Authentication})
+}
+
+func (s *Server) deleteAuthTokenHandler(c *gin.Context) {
+	token, err := data.GetTokenPlainTextFromContext(c)
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+	}
+
+	tokenHash := data.GetTokenHash(token)
+
+	err = s.db.Queries().DeleteToken(c, tokenHash[:])
+
+	if err != nil {
+		s.logger.LogError(c, err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "operation not permitted"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete token"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

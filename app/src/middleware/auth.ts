@@ -16,13 +16,19 @@ export const authenticate: RequestHandler = async (requestEvent) => {
     }
   }
 
+  requestEvent.cookie.delete("token");
   requestEvent.sharedMap.set("user", null);
 };
 
-export const requireAuth: RequestHandler = async ({ redirect, sharedMap }) => {
+export const requireAuth: RequestHandler = async ({
+  cookie,
+  redirect,
+  sharedMap,
+}) => {
   const user = sharedMap.get("user");
 
   if (!user) {
+    cookie.delete("token");
     throw redirect(303, "/login");
   }
 };

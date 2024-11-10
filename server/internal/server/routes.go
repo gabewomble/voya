@@ -22,6 +22,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 	protected := r.Group("/")
 	protected.Use(s.requireAuthenticatedUser())
 	{
+		// Tokens
+		// TODO: Implement a refresh handler
+		protected.DELETE("/tokens/current", s.deleteAuthTokenHandler)
 		// Users
 		protected.GET("/users/current", s.getCurrentUserHandler)
 		protected.GET("/users/:id", s.getUserByIdHandler)
