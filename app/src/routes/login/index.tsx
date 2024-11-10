@@ -32,13 +32,14 @@ export const useLoginAction = routeAction$(
 
     request.cookie.set("token", token, {
       path: "/",
+      httpOnly: true,
       sameSite: true,
       secure: false,
     });
     throw request.redirect(303, "/trips");
   },
   zod$({
-    email: z.string(),
+    email: z.string().email(),
     password: z.string(),
   }),
 );
@@ -89,6 +90,14 @@ export default component$(() => {
           <button class="btn btn-primary w-full" type="submit">
             Login
           </button>
+        </div>
+        <div class="mt-4 text-center">
+          <p class="text-sm">
+            Don't have an account?{" "}
+            <a href="/signup" class="text-primary">
+              Sign up
+            </a>
+          </p>
         </div>
       </Form>
     </div>

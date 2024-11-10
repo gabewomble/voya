@@ -72,7 +72,7 @@ func (u UserInput) Validate(v *validator.Validator) {
 	ValidateUserEmail(v, u.Email)
 
 	if u.Password.plaintext != nil {
-		ValidateTokenPlaintext(v, *u.Password.plaintext)
+		ValidateUserPasswordPlaintext(v, *u.Password.plaintext)
 		if !v.Valid() {
 			return
 		}

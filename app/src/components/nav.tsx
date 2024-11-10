@@ -26,23 +26,32 @@ export const Nav = component$(() => {
   const user = useContext(UserContext);
   const logout = useLogout();
 
+  const isLoggedIn = !!user.value;
+
   return (
-    <nav class="navbar bg-base-300">
-      <div class="mx-auto flex w-full max-w-screen-2xl items-center justify-between">
-        <a class="link text-xl no-underline" href="/trips">
+    <nav class="navbar bg-base-300 shadow-lg">
+      <div class="container mx-auto flex items-center justify-between px-4">
+        <a class="text-2xl font-bold text-primary" href="/">
           Voya
         </a>
-        {user.value ? (
-          <Form action={logout} class="contents">
-            <button class="link" type="submit">
-              Sign out
-            </button>
-          </Form>
-        ) : (
-          <a class="link" href="/login">
-            Login
-          </a>
-        )}
+        <div class="flex items-center gap-4 space-x-4">
+          {isLoggedIn ? (
+            <>
+              <a class="btn btn-ghost" href="/trips">
+                Trips
+              </a>
+              <Form action={logout} class="contents">
+                <button class="btn btn-ghost" type="submit">
+                  Sign out
+                </button>
+              </Form>
+            </>
+          ) : (
+            <a class="btn btn-primary" href="/login">
+              Login
+            </a>
+          )}
+        </div>
       </div>
     </nav>
   );

@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"server/internal/data"
 	"server/internal/repository"
@@ -36,6 +37,10 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	v := validator.New()
 
 	if userInput.Validate(v); !v.Valid() {
+		s.logger.LogInfo(c, "invalid user input")
+		for key, value := range v.Errors {
+			s.logger.LogInfo(c, fmt.Sprintf("%s: %s", key, value))
+		}
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": v.Errors})
 		return
 	}
@@ -60,9 +65,22 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 		return
 	}
 
-	// TODO: Activation email, token / cookie
+	// TODO: Activation email, token / cookie, token return here is temporary
+	// BEGIN TEMP CODE
+	token, err := data.Token.New(data.Token{}, user.ID, 24*time.Hour, data.TokenScope.Authentication)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
-	c.JSON(http.StatusCreated, gin.H{"user": user})
+	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams(token.Model))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// TODO: Remove token
+	c.JSON(http.StatusCreated, gin.H{"token": token.Plaintext, "user": user})
 }
 
 type cleanUser struct {
