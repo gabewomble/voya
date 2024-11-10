@@ -20,6 +20,23 @@ FROM
 WHERE
     email = @email;
 
+-- name: GetUserForToken :one
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version
+FROM
+    users
+    INNER JOIN tokens ON users.id = tokens.user_id
+WHERE
+    tokens.hash = @token_hash
+    AND tokens.scope = @token_scope
+    AND tokens.expiry > @token_expiry;
+
 -- name: UpdateUser :one
 UPDATE
     users

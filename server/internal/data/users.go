@@ -2,6 +2,7 @@ package data
 
 import (
 	"errors"
+	"server/internal/repository"
 	"server/internal/validator"
 
 	"golang.org/x/crypto/bcrypt"
@@ -16,6 +17,12 @@ type UserInput struct {
 type password struct {
 	plaintext *string
 	Hash      []byte
+}
+
+var AnonymousUser = &repository.User{}
+
+func UserIsAnonymous(u *repository.User) bool {
+	return u == AnonymousUser
 }
 
 func (p *password) Set(plaintext string) error {

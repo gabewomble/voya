@@ -9,3 +9,8 @@ import (
 func (s *Server) invalidCredentialsResponse(c *gin.Context) {
 	c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authentication credentials"})
 }
+
+func (s *Server) invalidAuthTokenResponse(c *gin.Context) {
+	c.Header("WWW-Authenticate", "Bearer")
+	c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or missing authentication token"})
+}

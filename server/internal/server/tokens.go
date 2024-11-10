@@ -66,5 +66,5 @@ func (s *Server) createAuthTokenHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"token": token.Model})
+	c.JSON(http.StatusCreated, gin.H{"token": token.Plaintext, "scope": data.ScopeAuthentication})
 }

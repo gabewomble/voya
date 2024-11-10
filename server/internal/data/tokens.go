@@ -45,6 +45,10 @@ func (t Token) New(userId uuid.UUID, ttl time.Duration, scope string) (*Token, e
 	return token, nil
 }
 
+func GetTokenHash(plaintext string) [32]byte {
+	return sha256.Sum256([]byte(plaintext))
+}
+
 func ValidateTokenPlaintext(v *validator.Validator, pt string) {
 	v.CheckStrNotEmpty(pt, "token")
 	v.Check(len(pt) == 26, "token", "must be 26 bytes long")

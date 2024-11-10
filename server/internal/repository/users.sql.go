@@ -42,6 +42,45 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	return i, err
 }
 
+const getUserForToken = `-- name: GetUserForToken :one
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version
+FROM
+    users
+    INNER JOIN tokens ON users.id = tokens.user_id
+WHERE
+    tokens.hash = $1
+    AND tokens.scope = $2
+    AND tokens.expiry > $3
+`
+
+type GetUserForTokenParams struct {
+	TokenHash   []byte    `json:"token_hash"`
+	TokenScope  string    `json:"token_scope"`
+	TokenExpiry time.Time `json:"token_expiry"`
+}
+
+func (q *Queries) GetUserForToken(ctx context.Context, arg GetUserForTokenParams) (User, error) {
+	row := q.db.QueryRow(ctx, getUserForToken, arg.TokenHash, arg.TokenScope, arg.TokenExpiry)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.Name,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Activated,
+		&i.Version,
+	)
+	return i, err
+}
+
 const insertUser = `-- name: InsertUser :one
 INSERT INTO
     users (name, email, password_hash, activated)

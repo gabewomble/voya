@@ -12,6 +12,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Use(gin.Logger())
 
 	r.Use(gin.Recovery())
+	r.Use(s.authenticate())
 
 	r.GET("/", s.HelloWorldHandler)
 
@@ -31,10 +32,12 @@ func (s *Server) RegisterRoutes() http.Handler {
 }
 
 func (s *Server) HelloWorldHandler(c *gin.Context) {
-	resp := make(map[string]string)
-	resp["message"] = "Hello World"
+	user := s.ctxGetUser(c)
 
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Hello, world!",
+		"user":    user,
+	})
 }
 
 func (s *Server) healthHandler(c *gin.Context) {
