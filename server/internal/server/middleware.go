@@ -69,3 +69,17 @@ func (s *Server) authenticate() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func (s *Server) requireAuthenticatedUser() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user := s.ctxGetUser(c)
+
+		if data.UserIsAnonymous(user) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "you must be authenticated to access this resource"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}

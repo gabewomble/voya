@@ -15,18 +15,18 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Use(s.authenticate())
 
 	r.GET("/", s.HelloWorldHandler)
-
 	r.GET("/health", s.healthHandler)
+	r.POST("/users", s.registerUserHandler)
+	r.POST("/tokens/authenticate", s.createAuthTokenHandler)
+
+	protected := r.Group("/")
+	protected.Use(s.requireAuthenticatedUser())
 
 	// Trips
-	r.GET("/trips", s.listTripsHandler)
-	r.POST("/trips", s.createTripHandler)
-	r.GET("/trips/:id", s.getTripByIdHandler)
-	r.DELETE("/trips/:id", s.deleteTripByIdHandler)
-
-	r.POST("/users", s.registerUserHandler)
-
-	r.POST("/tokens/authenticate", s.createAuthTokenHandler)
+	protected.GET("/trips", s.listTripsHandler)
+	protected.POST("/trips", s.createTripHandler)
+	protected.GET("/trips/:id", s.getTripByIdHandler)
+	protected.DELETE("/trips/:id", s.deleteTripByIdHandler)
 
 	return r
 }
