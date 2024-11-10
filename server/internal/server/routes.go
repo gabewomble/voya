@@ -24,6 +24,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	// Users
 	protected.GET("/users/current", s.getCurrentUserHandler)
+	protected.GET("/users/:id", s.getUserByIdHandler)
 
 	// Trips
 	protected.GET("/trips", s.listTripsHandler)

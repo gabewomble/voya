@@ -64,7 +64,7 @@ func (s *Server) getTripByIdHandler(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
-			c.JSON(http.StatusNotFound, gin.H{"error": "trip not found"})
+			s.notFoundResponse(c, "trip not found")
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}

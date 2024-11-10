@@ -20,6 +20,20 @@ FROM
 WHERE
     email = @email;
 
+-- name: GetUserById :one
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version
+FROM
+    users
+WHERE
+    id = @id;
+
 -- name: GetUserForToken :one
 SELECT
     id,

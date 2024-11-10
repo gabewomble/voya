@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 	"server/internal/data"
 	"server/internal/repository"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -63,7 +65,7 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"user": user})
 }
 
-type UserWithoutPassword struct {
+type cleanUser struct {
 	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	Name      string    `json:"name"`
@@ -72,17 +74,38 @@ type UserWithoutPassword struct {
 	Version   int32     `json:"version"`
 }
 
+func sanitizeUser(u *repository.User) cleanUser {
+	return cleanUser{
+		ID:        u.ID,
+		CreatedAt: u.CreatedAt,
+		Name:      u.Name,
+		Email:     u.Email,
+		Activated: u.Activated,
+		Version:   u.Version}
+}
+
 func (s *Server) getCurrentUserHandler(c *gin.Context) {
 	ctxUser := s.ctxGetUser(c)
 
-	user := &UserWithoutPassword{
-		ID:        ctxUser.ID,
-		CreatedAt: ctxUser.CreatedAt,
-		Name:      ctxUser.Name,
-		Email:     ctxUser.Email,
-		Activated: ctxUser.Activated,
-		Version:   ctxUser.Version,
+	c.JSON(http.StatusFound, gin.H{"user": sanitizeUser(ctxUser)})
+}
+
+func (s *Server) getUserByIdHandler(c *gin.Context) {
+	userId, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
 	}
 
-	c.JSON(http.StatusFound, gin.H{"user": user})
+	user, err := s.db.Queries().GetUserById(c, userId)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.notFoundResponse(c, "user not found")
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusFound, gin.H{"user": sanitizeUser(&user)})
 }
