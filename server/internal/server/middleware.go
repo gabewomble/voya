@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"server/internal/data"
 	"server/internal/repository"
@@ -28,14 +27,12 @@ func (s *Server) authenticate() gin.HandlerFunc {
 
 		headerParts := strings.Split(authHeader, " ")
 		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
-			s.logger.LogInfo(c, "aborted auth at header parsing")
 			s.invalidAuthTokenResponse(c)
 			c.Abort()
 			return
 		}
 
 		token := headerParts[1]
-		s.logger.LogInfo(c, fmt.Sprintf("token: %s", token))
 
 		v := validator.New()
 
@@ -46,7 +43,6 @@ func (s *Server) authenticate() gin.HandlerFunc {
 		}
 
 		tokenHash := data.GetTokenHash(token)
-		s.logger.LogInfo(c, fmt.Sprintf("hash: %s", tokenHash))
 
 		user, err := s.db.Queries().GetUserForToken(c, repository.GetUserForTokenParams{
 			TokenHash:   tokenHash[:],

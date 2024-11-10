@@ -21,16 +21,17 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	protected := r.Group("/")
 	protected.Use(s.requireAuthenticatedUser())
+	{
+		// Users
+		protected.GET("/users/current", s.getCurrentUserHandler)
+		protected.GET("/users/:id", s.getUserByIdHandler)
 
-	// Users
-	protected.GET("/users/current", s.getCurrentUserHandler)
-	protected.GET("/users/:id", s.getUserByIdHandler)
-
-	// Trips
-	protected.GET("/trips", s.listTripsHandler)
-	protected.POST("/trips", s.createTripHandler)
-	protected.GET("/trips/:id", s.getTripByIdHandler)
-	protected.DELETE("/trips/:id", s.deleteTripByIdHandler)
+		// Trips
+		protected.GET("/trips", s.listTripsHandler)
+		protected.POST("/trips", s.createTripHandler)
+		protected.GET("/trips/:id", s.getTripByIdHandler)
+		protected.DELETE("/trips/:id", s.deleteTripByIdHandler)
+	}
 
 	return r
 }

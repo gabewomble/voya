@@ -87,7 +87,7 @@ func sanitizeUser(u *repository.User) cleanUser {
 func (s *Server) getCurrentUserHandler(c *gin.Context) {
 	ctxUser := s.ctxGetUser(c)
 
-	c.JSON(http.StatusFound, gin.H{"user": sanitizeUser(ctxUser)})
+	c.JSON(http.StatusOK, gin.H{"user": sanitizeUser(ctxUser)})
 }
 
 func (s *Server) getUserByIdHandler(c *gin.Context) {
@@ -107,5 +107,5 @@ func (s *Server) getUserByIdHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusFound, gin.H{"user": sanitizeUser(&user)})
+	c.JSON(http.StatusOK, gin.H{"user": sanitizeUser(&user)})
 }

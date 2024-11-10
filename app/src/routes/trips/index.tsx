@@ -1,15 +1,10 @@
 import { component$ } from "@builder.io/qwik";
 import { routeLoader$, type DocumentHead } from "@builder.io/qwik-city";
+import { serverFetch } from "~/helpers/server-fetch";
 import type { Trip } from "~/types/trips";
 
 export const useGetTrips = routeLoader$(async (request) => {
-  const token = request.cookie.get("token")?.value;
-  const res = await fetch("http://localhost:8080/trips", {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const res = await serverFetch("/trips", {}, request);
   const json = await res.json();
   return json?.trips ?? ([] as Trip[]);
 });
