@@ -1,21 +1,26 @@
 import { component$ } from "@builder.io/qwik";
 import { Form, routeAction$, z, zod$ } from "@builder.io/qwik-city";
+import { serverFetch } from "~/helpers/server-fetch";
 
 export const useLoginAction = routeAction$(
   async (data, request) => {
     const email = data.email;
     const password = data.password;
 
-    const res = await fetch(`http://localhost:8080/tokens/authenticate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const res = await serverFetch(
+      "/tokens/authenticate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
       },
-      body: JSON.stringify({
-        email,
-        password,
-      }),
-    });
+      request,
+    );
 
     if (!res.ok) {
       request.fail(res.status, await res.json());
