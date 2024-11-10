@@ -5,8 +5,10 @@ import (
 	"server/internal/data"
 	"server/internal/repository"
 	"server/internal/validator"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -59,4 +61,28 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	// TODO: Activation email, token / cookie
 
 	c.JSON(http.StatusCreated, gin.H{"user": user})
+}
+
+type UserWithoutPassword struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	Activated bool      `json:"activated"`
+	Version   int32     `json:"version"`
+}
+
+func (s *Server) getCurrentUserHandler(c *gin.Context) {
+	ctxUser := s.ctxGetUser(c)
+
+	user := &UserWithoutPassword{
+		ID:        ctxUser.ID,
+		CreatedAt: ctxUser.CreatedAt,
+		Name:      ctxUser.Name,
+		Email:     ctxUser.Email,
+		Activated: ctxUser.Activated,
+		Version:   ctxUser.Version,
+	}
+
+	c.JSON(http.StatusFound, gin.H{"user": user})
 }
