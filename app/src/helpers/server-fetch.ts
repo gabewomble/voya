@@ -1,10 +1,10 @@
-import type { Cookie } from "@builder.io/qwik-city";
+import type { RequestEventBase } from "@builder.io/qwik-city";
 
-type Context = {
-  cookie: Cookie;
-};
-
-export function serverFetch(path: string, options: RequestInit, ctx: Context) {
+export function serverFetch(
+  path: string,
+  options: RequestInit,
+  ctx: RequestEventBase,
+) {
   const token = ctx.cookie.get("token")?.value;
   const auth: Record<string, string> = {};
 
@@ -12,7 +12,7 @@ export function serverFetch(path: string, options: RequestInit, ctx: Context) {
     auth.Authorization = `Bearer ${token}`;
   }
 
-  const url = new URL(path, `http://localhost:8080`);
+  const url = new URL(path, ctx.env.get("API_URL"));
 
   return fetch(url, {
     ...options,

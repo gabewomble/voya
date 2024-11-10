@@ -6,7 +6,7 @@ import type { Trip } from "~/types/trips";
 export const useGetTrips = routeLoader$(async (request) => {
   const res = await serverFetch("/trips", {}, request);
   const json = await res.json();
-  return json?.trips ?? ([] as Trip[]);
+  return (json?.trips ?? []) as Trip[];
 });
 
 export default component$(() => {
