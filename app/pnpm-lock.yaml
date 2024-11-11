@@ -14,6 +14,9 @@ importers:
       '@builder.io/qwik-city':
         specifier: ^1.9.1
         version: 1.9.1(@types/node@20.14.11)(acorn@8.13.0)(rollup@4.24.0)(typescript@5.4.5)
+      '@modular-forms/qwik':
+        specifier: ^0.28.2
+        version: 0.28.2(@builder.io/qwik-city@1.9.1(@types/node@20.14.11)(acorn@8.13.0)(rollup@4.24.0)(typescript@5.4.5))(@builder.io/qwik@1.9.1(@types/node@20.14.11))(typescript@5.4.5)
       '@types/eslint':
         specifier: 8.56.10
         version: 8.56.10
@@ -379,6 +382,12 @@ packages:
 
   '@mdx-js/mdx@3.1.0':
     resolution: {integrity: sha512-/QxEhPAvGwbQmy1Px8F899L5Uc2KZ6JtXwlCgJmjSTBedwOZkByYcBG4GceIGPXRDsmfxhHazuS+hlOShRLeDw==}
+
+  '@modular-forms/qwik@0.28.2':
+    resolution: {integrity: sha512-L4M0n8p8n6qvNl/kBPZueb4IzZh38C/VFx+2vEoa90FPfwfxRdDqj+yyFGcbDYO6fcngShOfjRGd/mJJw8AIZg==}
+    peerDependencies:
+      '@builder.io/qwik': ^1.9.0 || ^2.0.0
+      '@builder.io/qwik-city': ^1.9.0 || ^2.0.0
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -825,6 +834,9 @@ packages:
     peerDependenciesMeta:
       supports-color:
         optional: true
+
+  decode-formdata@0.8.0:
+    resolution: {integrity: sha512-iUzDgnWsw5ToSkFY7VPFA5Gfph6ROoOxOB7Ybna4miUSzLZ4KaSJk6IAB2AdW6+C9vCVWhjjNA4gjT6wF3eZHQ==}
 
   decode-named-character-reference@1.0.2:
     resolution: {integrity: sha512-O8x12RzrUF8xyVcY0KJowWsmaJxQbmy0/EtnNtHRpsOcT7dFk5W598coHqBVpmWo1oQQfsCqfCmkZN5DJrZVdg==}
@@ -2023,6 +2035,14 @@ packages:
       typescript:
         optional: true
 
+  valibot@1.0.0-beta.0:
+    resolution: {integrity: sha512-Q/oine+NPMXdIy3vwluw0vidHLk0mTPUQBRHc+EHZXnEWF3KzLx1YLsVHPVrgHaMGRfV58P9eGOgxJvi0a059w==}
+    peerDependencies:
+      typescript: '>=5'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   vfile-message@4.0.2:
     resolution: {integrity: sha512-jRDZ1IMLttGj41KcZvlrYAaI3CfqpLpfpf+Mfig13viT6NKvRzWZ+lXz0Y5D60w6uJIBAOGq9mSHf0gktF0duw==}
 
@@ -2392,6 +2412,15 @@ snapshots:
     transitivePeerDependencies:
       - acorn
       - supports-color
+
+  '@modular-forms/qwik@0.28.2(@builder.io/qwik-city@1.9.1(@types/node@20.14.11)(acorn@8.13.0)(rollup@4.24.0)(typescript@5.4.5))(@builder.io/qwik@1.9.1(@types/node@20.14.11))(typescript@5.4.5)':
+    dependencies:
+      '@builder.io/qwik': 1.9.1(@types/node@20.14.11)
+      '@builder.io/qwik-city': 1.9.1(@types/node@20.14.11)(acorn@8.13.0)(rollup@4.24.0)(typescript@5.4.5)
+      decode-formdata: 0.8.0
+      valibot: 1.0.0-beta.0(typescript@5.4.5)
+    transitivePeerDependencies:
+      - typescript
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
@@ -2840,6 +2869,8 @@ snapshots:
   debug@4.3.7:
     dependencies:
       ms: 2.1.3
+
+  decode-formdata@0.8.0: {}
 
   decode-named-character-reference@1.0.2:
     dependencies:
@@ -4433,6 +4464,10 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   valibot@0.42.1(typescript@5.4.5):
+    optionalDependencies:
+      typescript: 5.4.5
+
+  valibot@1.0.0-beta.0(typescript@5.4.5):
     optionalDependencies:
       typescript: 5.4.5
 
