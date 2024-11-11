@@ -28,22 +28,14 @@ export const useSignupAction = routeAction$(
       request,
     );
 
+    const json = await res.json();
+
     if (!res.ok) {
-      request.fail(res.status, await res.json());
+      request.fail(res.status, json);
       return;
     }
 
-    const json = await res.json();
-    const token = json.token;
-
-    request.cookie.set("token", token, {
-      path: "/",
-      httpOnly: true,
-      sameSite: true,
-      secure: false,
-    });
-
-    throw request.redirect(303, "/trips");
+    throw request.redirect(303, "/activate");
   },
   zod$({
     name: z.string().min(1).max(256),

@@ -4,12 +4,12 @@ INSERT INTO
 VALUES
     ($1, $2, $3, $4);
 
--- name: DeleteAllForUser :exec
+-- name: DeleteAllTokensForUser :exec
 DELETE FROM
     tokens
 WHERE
-    scope = $1
-    AND user_id = $2;
+    scope = @token_scope
+    AND user_id = @user_id;
 
 -- name: DeleteToken :exec
 DELETE FROM

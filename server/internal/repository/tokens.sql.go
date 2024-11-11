@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const deleteAllForUser = `-- name: DeleteAllForUser :exec
+const deleteAllTokensForUser = `-- name: DeleteAllTokensForUser :exec
 DELETE FROM
     tokens
 WHERE
@@ -20,13 +20,13 @@ WHERE
     AND user_id = $2
 `
 
-type DeleteAllForUserParams struct {
-	Scope  string    `json:"scope"`
-	UserID uuid.UUID `json:"user_id"`
+type DeleteAllTokensForUserParams struct {
+	TokenScope string    `json:"token_scope"`
+	UserID     uuid.UUID `json:"user_id"`
 }
 
-func (q *Queries) DeleteAllForUser(ctx context.Context, arg DeleteAllForUserParams) error {
-	_, err := q.db.Exec(ctx, deleteAllForUser, arg.Scope, arg.UserID)
+func (q *Queries) DeleteAllTokensForUser(ctx context.Context, arg DeleteAllTokensForUserParams) error {
+	_, err := q.db.Exec(ctx, deleteAllTokensForUser, arg.TokenScope, arg.UserID)
 	return err
 }
 

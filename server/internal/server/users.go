@@ -74,6 +74,11 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams(token.Model))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
 	// Send activation email
 	s.background(func() {
@@ -139,4 +144,73 @@ func (s *Server) getUserByIdHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"user": sanitizeUser(&user)})
+}
+
+func (s *Server) activateUserHandler(c *gin.Context) {
+	// Parse activation token
+	var input struct {
+		Token string `json:"token"`
+	}
+	if err := c.BindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	// Validate activation token
+	v := validator.New()
+	if data.ValidateTokenPlaintext(v, input.Token); !v.Valid() {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": v.Errors})
+		return
+	}
+	// Find user from activation token
+	tokenHash := data.GetTokenHash(input.Token)
+	user, err := s.db.Queries().GetUserForToken(c, repository.GetUserForTokenParams{
+		TokenHash:   tokenHash[:],
+		TokenScope:  data.TokenScope.Activation,
+		TokenExpiry: time.Now(),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			v.AddError("token", "invalid or expired activation token")
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": v.Errors})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	// Update user activation status
+	user.Activated = true
+	_, err = s.db.Queries().UpdateUser(c, repository.UpdateUserParams{
+		Activated:    user.Activated,
+		Email:        user.Email,
+		ID:           user.ID,
+		Name:         user.Name,
+		PasswordHash: user.PasswordHash,
+		Version:      user.Version,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	// Delete activation tokens
+	err = s.db.Queries().DeleteAllTokensForUser(c, repository.DeleteAllTokensForUserParams{
+		TokenScope: data.TokenScope.Activation,
+		UserID:     user.ID,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	// Create authentication token
+	token, err := data.Token.New(data.Token{}, user.ID, 24*time.Hour, data.TokenScope.Authentication)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	// Insert authentication token
+	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams(token.Model))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"token": token.Plaintext})
 }
