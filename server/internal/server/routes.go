@@ -17,6 +17,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.GET("/", s.HelloWorldHandler)
 	r.GET("/health", s.healthHandler)
 	r.POST("/users", s.registerUserHandler)
+	r.GET("/users/current", s.getCurrentUserHandler)
 	r.POST("/tokens/authenticate", s.createAuthTokenHandler)
 
 	protected := r.Group("/")
@@ -26,7 +27,6 @@ func (s *Server) RegisterRoutes() http.Handler {
 		// TODO: Implement a refresh handler
 		protected.DELETE("/tokens/current", s.deleteAuthTokenHandler)
 		// Users
-		protected.GET("/users/current", s.getCurrentUserHandler)
 		protected.GET("/users/:id", s.getUserByIdHandler)
 
 		// Trips

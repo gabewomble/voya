@@ -5,12 +5,14 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
 
 	"server/internal/database"
 	"server/internal/logger"
+	"server/internal/mailer"
 )
 
 type Server struct {
@@ -18,6 +20,8 @@ type Server struct {
 
 	db     database.Service
 	logger *logger.Logger
+	mailer mailer.Mailer
+	wg     sync.WaitGroup
 }
 
 func NewServer() *http.Server {
@@ -27,6 +31,7 @@ func NewServer() *http.Server {
 
 		db:     database.New(),
 		logger: logger.New(),
+		mailer: mailer.New(),
 	}
 
 	// Declare Server config

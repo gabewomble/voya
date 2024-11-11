@@ -18,7 +18,7 @@ func New() *Logger {
 		return loggerInstance
 	}
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	loggerInstance = &Logger{
 		logger,
 	}

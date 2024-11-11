@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"server/internal/data"
 	"server/internal/repository"
 	"server/internal/validator"
@@ -14,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
+
+var appUrl = os.Getenv("APP_URL")
 
 func (s *Server) registerUserHandler(c *gin.Context) {
 	var input struct {
@@ -65,22 +68,27 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 		return
 	}
 
-	// TODO: Activation email, token / cookie, token return here is temporary
-	// BEGIN TEMP CODE
-	token, err := data.Token.New(data.Token{}, user.ID, 24*time.Hour, data.TokenScope.Authentication)
+	// Create activation token
+	token, err := data.Token.New(data.Token{}, user.ID, 3*24*time.Hour, data.TokenScope.Activation)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams(token.Model))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+	// Send activation email
+	s.background(func() {
+		activationURL := fmt.Sprintf("%s/activate/%s", appUrl, token.Plaintext)
+		data := map[string]any{
+			"activationURL": activationURL,
+		}
 
-	// TODO: Remove token
-	c.JSON(http.StatusCreated, gin.H{"token": token.Plaintext, "user": user})
+		err = s.mailer.Send(userInput.Email, "user_welcome.tmpl", data)
+		if err != nil {
+			s.logger.LogError(c, err)
+		}
+	})
+
+	c.JSON(http.StatusCreated, gin.H{"user": user})
 }
 
 type cleanUser struct {
@@ -104,6 +112,11 @@ func sanitizeUser(u *repository.User) cleanUser {
 
 func (s *Server) getCurrentUserHandler(c *gin.Context) {
 	ctxUser := s.ctxGetUser(c)
+
+	if data.UserIsAnonymous(ctxUser) {
+		c.JSON(http.StatusOK, gin.H{"user": nil})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{"user": sanitizeUser(ctxUser)})
 }

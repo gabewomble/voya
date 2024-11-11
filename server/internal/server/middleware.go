@@ -18,6 +18,7 @@ func (s *Server) authenticate() gin.HandlerFunc {
 		token, err := data.GetTokenPlainTextFromContext(c)
 
 		if err != nil {
+			s.ctxSetUser(c, data.AnonymousUser)
 			s.logger.LogError(c, err)
 			switch {
 			case errors.Is(err, data.TokenErr.NotFound):
@@ -39,6 +40,7 @@ func (s *Server) authenticate() gin.HandlerFunc {
 		})
 
 		if err != nil {
+			s.ctxSetUser(c, data.AnonymousUser)
 			if errors.Is(err, pgx.ErrNoRows) {
 				s.invalidAuthTokenResponse(c)
 				c.Abort()
