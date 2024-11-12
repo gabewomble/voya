@@ -19,7 +19,7 @@ type Server struct {
 	port int
 
 	db     database.Service
-	logger *logger.Logger
+	log    *logger.Logger
 	mailer mailer.Mailer
 	wg     sync.WaitGroup
 }
@@ -30,7 +30,7 @@ func NewServer() *http.Server {
 		port: port,
 
 		db:     database.New(),
-		logger: logger.New(),
+		log:    logger.New(),
 		mailer: mailer.New(),
 	}
 
