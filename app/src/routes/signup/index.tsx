@@ -1,124 +1,180 @@
 import { component$ } from "@builder.io/qwik";
-import { Form, zod$, routeAction$, z } from "@builder.io/qwik-city";
+import { z, routeLoader$ } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
 import { requireNoAuth } from "~/middleware/auth";
+import {
+  zodForm$,
+  useForm,
+  formAction$,
+  type InitialValues,
+} from "@modular-forms/qwik";
+import type { ErrorResponse } from "~/types/server-errors";
+import { TextInput } from "~/components";
+import { mapServerErrors } from "~/helpers/map-server-errors";
 
 export const onGet = requireNoAuth;
 
-export const useSignupAction = routeAction$(
-  async (formData, request) => {
-    const { email, password, confirmPassword, name } = formData;
-    // Add your signup logic here
-    // For example, you can send a request to your backend to create a new user
-    if (password !== confirmPassword) {
-      request.fail(400, { error: "Passwords do not match" });
-      return;
+const SignupForm = z
+  .object({
+    name: z
+      .string()
+      .min(1, "Name is required")
+      .max(50, "Name cannot be longer than 50 characters"),
+    email: z.string().email("Invalid email address"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .max(32, "Password cannot be longer than 32 characters"),
+    confirmPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters"),
+  })
+  .superRefine(({ password, confirmPassword }, ctx) => {
+    if (password && confirmPassword && password !== confirmPassword) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Passwords do not match",
+        path: ["confirmPassword"],
+      });
     }
+  });
+
+type SignupForm = z.infer<typeof SignupForm>;
+
+export const useSignupAction = formAction$<SignupForm>(
+  async (data, request) => {
+    const { name, email, password } = data;
 
     const res = await serverFetch(
       "/users",
       {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
+          name,
           email,
           password,
-          name,
         }),
       },
       request,
     );
 
-    const json = await res.json();
-
     if (!res.ok) {
-      request.fail(res.status, json);
-      return;
+      const { errors } = ((await res.json()) ?? {
+        errors: [],
+      }) as ErrorResponse;
+
+      const { messages, fields } = mapServerErrors({
+        errors,
+        messages: {},
+        fields: {
+          name: {},
+          email: {
+            "duplicate email": "Email is already in use",
+          },
+          password: {},
+        },
+      });
+
+      return {
+        message: messages[0],
+        errors: {
+          name: fields.name[0],
+          email: fields.email[0],
+          password: fields.password[0],
+        },
+      };
     }
 
     throw request.redirect(303, "/activate");
   },
-  zod$({
-    name: z.string().min(1).max(256),
-    email: z.string().email(),
-    password: z.string().min(8).max(72),
-    confirmPassword: z.string().min(8).max(72),
+  zodForm$(SignupForm),
+);
+
+export const useSignupFormLoader = routeLoader$<InitialValues<SignupForm>>(
+  () => ({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
   }),
 );
 
 export default component$(() => {
-  // TODO: use form errors from useSignupAction
-  const signup = useSignupAction();
+  const [signupForm, { Form, Field }] = useForm<SignupForm>({
+    loader: useSignupFormLoader(),
+    action: useSignupAction(),
+    validate: zodForm$(SignupForm),
+    validateOn: "blur",
+    revalidateOn: "blur",
+  });
 
   return (
     <div class="flex h-screen items-center justify-center">
-      <Form
-        action={signup}
-        class="w-full max-w-sm rounded-lg bg-base-200 p-6 shadow-lg"
-      >
+      <Form class="w-full max-w-sm rounded-lg bg-base-200 p-6 shadow-lg">
         <h2 class="mb-4 text-2xl font-bold">Sign Up</h2>
+        {signupForm.response.message && (
+          <p class="my-2 text-error">{signupForm.response.message}</p>
+        )}
         <div class="mb-4">
-          <label
-            class="mb-2 block text-sm font-bold text-base-content"
-            for="name"
-          >
-            Name
-          </label>
-          <input
-            value={signup.formData?.get("name")}
-            class="input input-bordered w-full"
-            type="text"
-            id="name"
-            name="name"
-            placeholder="Enter your name"
-          />
+          <Field name="name">
+            {(field, props) => (
+              <TextInput
+                id="name"
+                label="Name"
+                name="name"
+                placeholder="Enter your name"
+                field={field}
+                fieldProps={props}
+              />
+            )}
+          </Field>
         </div>
         <div class="mb-4">
-          <label
-            class="mb-2 block text-sm font-bold text-base-content"
-            for="email"
-          >
-            Email
-          </label>
-          <input
-            value={signup.formData?.get("email")}
-            class="input input-bordered w-full"
-            type="text"
-            id="email"
-            name="email"
-            placeholder="Enter your email"
-          />
+          <Field name="email">
+            {(field, props) => (
+              <TextInput
+                id="email"
+                label="Email"
+                name="email"
+                placeholder="Enter your email"
+                field={field}
+                fieldProps={props}
+              />
+            )}
+          </Field>
         </div>
         <div class="mb-4">
-          <label
-            class="mb-2 block text-sm font-bold text-base-content"
-            for="password"
-          >
-            Password
-          </label>
-          <input
-            value={signup.formData?.get("password")}
-            class="input input-bordered w-full"
-            type="password"
-            id="password"
-            name="password"
-            placeholder="Enter your password"
-          />
+          <Field name="password">
+            {(field, props) => (
+              <TextInput
+                id="password"
+                label="Password"
+                name="password"
+                placeholder="Enter your password"
+                type="password"
+                field={field}
+                fieldProps={props}
+              />
+            )}
+          </Field>
         </div>
         <div class="mb-6">
-          <label
-            class="mb-2 block text-sm font-bold text-base-content"
-            for="confirmPassword"
-          >
-            Confirm Password
-          </label>
-          <input
-            value={signup.formData?.get("confirmPassword")}
-            class="input input-bordered w-full"
-            type="password"
-            id="confirmPassword"
-            name="confirmPassword"
-            placeholder="Confirm your password"
-          />
+          <Field name="confirmPassword">
+            {(field, props) => (
+              <TextInput
+                id="confirmPassword"
+                label="Confirm Password"
+                name="confirmPassword"
+                placeholder="Confirm your password"
+                type="password"
+                field={field}
+                fieldProps={props}
+              />
+            )}
+          </Field>
         </div>
         <div class="flex items-center justify-between">
           <button class="btn btn-primary w-full" type="submit">
