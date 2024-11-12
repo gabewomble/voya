@@ -26,7 +26,7 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	}
 
 	if err := c.BindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		s.badRequest(c, errorDetailsFromError(err))
 		return
 	}
 
@@ -40,11 +40,7 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	v := validator.New()
 
 	if userInput.Validate(v); !v.Valid() {
-		s.logger.LogInfo(c, "invalid user input")
-		for key, value := range v.Errors {
-			s.logger.LogInfo(c, fmt.Sprintf("%s: %s", key, value))
-		}
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": v.Errors})
+		s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
 		return
 	}
 
@@ -60,23 +56,23 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			v.AddError("email", "duplicate email")
-			c.JSON(http.StatusBadRequest, gin.H{"errors": v.Errors})
+			s.badRequest(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 
 	// Create activation token
 	token, err := data.Token.New(data.Token{}, user.ID, 3*24*time.Hour, data.TokenScope.Activation)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams(token.Model))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 
@@ -89,7 +85,7 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 
 		err = s.mailer.Send(userInput.Email, "user_welcome.tmpl", data)
 		if err != nil {
-			s.logger.LogError(c, err)
+			s.log.LogError(c, "Failed to send activation email", err, "email", userInput.Email)
 		}
 	})
 
@@ -129,17 +125,17 @@ func (s *Server) getCurrentUserHandler(c *gin.Context) {
 func (s *Server) getUserByIdHandler(c *gin.Context) {
 	userId, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		s.badRequest(c, errorDetailsFromMessage("invalid id"))
 		return
 	}
 
 	user, err := s.db.Queries().GetUserById(c, userId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			s.notFoundResponse(c, "user not found")
+			s.notFoundResponse(c, errorDetailsFromMessage("user not found"))
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 
@@ -152,13 +148,13 @@ func (s *Server) activateUserHandler(c *gin.Context) {
 		Token string `json:"token"`
 	}
 	if err := c.BindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		s.badRequest(c, errorDetailsFromError(err))
 		return
 	}
 	// Validate activation token
 	v := validator.New()
 	if data.ValidateTokenPlaintext(v, input.Token); !v.Valid() {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": v.Errors})
+		s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
 		return
 	}
 	// Find user from activation token
@@ -171,10 +167,10 @@ func (s *Server) activateUserHandler(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			v.AddError("token", "invalid or expired activation token")
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": v.Errors})
+			s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 	// Update user activation status
@@ -188,7 +184,7 @@ func (s *Server) activateUserHandler(c *gin.Context) {
 		Version:      user.Version,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 	// Delete activation tokens
@@ -197,19 +193,19 @@ func (s *Server) activateUserHandler(c *gin.Context) {
 		UserID:     user.ID,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 	// Create authentication token
 	token, err := data.Token.New(data.Token{}, user.ID, 24*time.Hour, data.TokenScope.Authentication)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 	// Insert authentication token
 	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams(token.Model))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"token": token.Plaintext})

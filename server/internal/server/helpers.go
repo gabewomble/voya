@@ -1,7 +1,5 @@
 package server
 
-import "fmt"
-
 func (s *Server) background(fn func()) {
 	s.wg.Add(1)
 
@@ -10,7 +8,7 @@ func (s *Server) background(fn func()) {
 
 		defer func() {
 			if err := recover(); err != nil {
-				s.logger.LogError(nil, fmt.Errorf("panic: %v", err))
+				s.log.LogError(nil, "Failed to recover background call", nil, "error", err)
 			}
 		}()
 

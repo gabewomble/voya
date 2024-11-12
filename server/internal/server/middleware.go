@@ -19,14 +19,13 @@ func (s *Server) authenticate() gin.HandlerFunc {
 
 		if err != nil {
 			s.ctxSetUser(c, data.AnonymousUser)
-			s.logger.LogError(c, err)
 			switch {
 			case errors.Is(err, data.TokenErr.NotFound):
 				c.Next()
 			case errors.Is(err, data.TokenErr.InvalidToken):
 				s.invalidAuthTokenResponse(c)
 			default:
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 			}
 			return
 		}
@@ -46,7 +45,7 @@ func (s *Server) authenticate() gin.HandlerFunc {
 				c.Abort()
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 			c.Abort()
 			return
 		}
@@ -61,7 +60,7 @@ func (s *Server) requireAuthenticatedUser() gin.HandlerFunc {
 		user := s.ctxGetUser(c)
 
 		if data.UserIsAnonymous(user) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "you must be authenticated to access this resource"})
+			s.errorResponse(c, http.StatusUnauthorized, errorDetailsFromMessage("you must be authenticated to access this resource"))
 			c.Abort()
 			return
 		}

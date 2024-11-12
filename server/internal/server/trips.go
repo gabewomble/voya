@@ -16,7 +16,7 @@ import (
 func (s *Server) listTripsHandler(c *gin.Context) {
 	trips, err := s.db.Queries().ListTrips(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		s.errorResponse(c, http.StatusInternalServerError, []ErrorDetail{{Message: err.Error()}})
 		return
 	}
 
@@ -31,24 +31,24 @@ func (s *Server) createTripHandler(c *gin.Context) {
 	input := repository.InsertTripParams{}
 
 	if err := c.BindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		s.badRequest(c, []ErrorDetail{{Message: err.Error()}})
 		return
 	}
 
 	v := validator.New()
 
 	if data.ValidateTrip(v, &input); !v.Valid() {
-		c.JSON(http.StatusBadRequest, gin.H{"errors": v.Errors, "error": "form is not valid"})
+		s.badRequest(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v, message: "form is not valid"}))
 		return
 	}
 
 	trip, err := s.db.Queries().InsertTrip(c, input)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 	}
 
-	s.logger.LogInfo(c, fmt.Sprintf("trip created: %s", trip.ID.String()))
+	s.log.LogInfo(c, "createTripHandler: trip created", "trip", trip)
 
 	c.Header("Location", fmt.Sprintf("/trips/%s", trip.ID))
 	c.JSON(http.StatusCreated, gin.H{"trip": trip})
@@ -57,17 +57,18 @@ func (s *Server) createTripHandler(c *gin.Context) {
 func (s *Server) getTripByIdHandler(c *gin.Context) {
 	tripID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		s.badRequest(c, errorDetailsFromMessage("invalid id"))
 		return
 	}
 
 	trip, err := s.db.Queries().GetTripById(c, tripID)
 	if err != nil {
+		s.log.LogError(c, "getTripByIdHandler: GetTripById failed", err)
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
-			s.notFoundResponse(c, "trip not found")
+			s.notFoundResponse(c, errorDetailsFromMessage("trip not found"))
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		}
 		return
 	}
@@ -78,19 +79,19 @@ func (s *Server) getTripByIdHandler(c *gin.Context) {
 func (s *Server) deleteTripByIdHandler(c *gin.Context) {
 	tripID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		s.badRequest(c, errorDetailsFromMessage("invalid id"))
 		return
 	}
 
 	_, err = s.db.Queries().GetTripById(c, tripID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		s.badRequest(c, errorDetailsFromError(err))
 		return
 	}
 
 	err = s.db.Queries().DeleteTripById(c, tripID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 

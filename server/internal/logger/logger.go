@@ -1,14 +1,13 @@
 package logger
 
 import (
-	"log/slog"
-	"os"
-
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type Logger struct {
-	*slog.Logger
+	*zap.SugaredLogger
 }
 
 var loggerInstance *Logger
@@ -18,27 +17,39 @@ func New() *Logger {
 		return loggerInstance
 	}
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	config := zap.NewProductionConfig()
+	config.EncoderConfig.TimeKey = "timestamp"
+	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	config.EncoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
+	config.OutputPaths = []string{"stdout"}
+
+	logger, err := config.Build()
+	if err != nil {
+		panic(err)
+	}
+
 	loggerInstance = &Logger{
-		logger,
+		SugaredLogger: logger.Sugar(),
 	}
 
 	return loggerInstance
 }
 
-func (l *Logger) LogError(c *gin.Context, err error) {
-	var (
-		method = c.Request.Method
-		uri    = c.Request.RequestURI
-	)
-
-	l.Error(err.Error(), "method", method, "uri", uri)
+func (l *Logger) LogError(c *gin.Context, message string, err error, fields ...interface{}) {
+	baseFields := []interface{}{
+		"method", c.Request.Method,
+		"uri", c.Request.RequestURI,
+		"error", err.Error(),
+	}
+	allFields := append(baseFields, fields...)
+	l.Errorw("Error", allFields...)
 }
 
-func (l *Logger) LogInfo(c *gin.Context, message string) {
-	var (
-		method = c.Request.Method
-		uri    = c.Request.RequestURI
-	)
-	l.Info(message, "method", method, "uri", uri)
+func (l *Logger) LogInfo(c *gin.Context, message string, fields ...interface{}) {
+	baseFields := []interface{}{
+		"method", c.Request.Method,
+		"uri", c.Request.RequestURI,
+	}
+	allFields := append(baseFields, fields...)
+	l.Infow(message, allFields...)
 }
