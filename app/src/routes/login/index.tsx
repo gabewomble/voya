@@ -8,6 +8,9 @@ import {
   formAction$,
   type InitialValues,
 } from "@modular-forms/qwik";
+import type { ErrorResponse } from "~/types/server-errors";
+import { TextInput } from "~/components";
+import { mapServerErrors } from "~/helpers/map-server-errors";
 
 export const onGet = requireNoAuth;
 
@@ -40,14 +43,24 @@ export const useLoginAction = formAction$<LoginForm>(async (data, request) => {
   );
 
   if (!res.ok) {
-    const { error, errors } = (await res.json()) ?? {};
+    const { errors } = ((await res.json()) ?? { errors: [] }) as ErrorResponse;
+
+    const { messages, fields } = mapServerErrors({
+      errors,
+      messages: {
+        [invalidCredentialError]: "Invalid email or password",
+      },
+      fields: {
+        email: {},
+        password: {},
+      },
+    });
 
     return {
-      message:
-        error === invalidCredentialError ? "Invalid email or password" : error,
+      message: messages[0],
       errors: {
-        email: errors?.email,
-        password: errors?.password,
+        email: fields.email[0],
+        password: fields.password[0],
       },
     };
   }
@@ -82,53 +95,34 @@ export default component$(() => {
       <Form class="w-full max-w-sm rounded-lg bg-base-200 p-6 shadow-lg">
         <h2 class="mb-4 text-2xl font-bold">Login</h2>
         {loginForm.response.message && (
-          <p class="my-2 text-warning">{loginForm.response.message}</p>
+          <p class="my-2 text-error">{loginForm.response.message}</p>
         )}
         <div class="mb-4">
-          <label
-            class="mb-2 block text-sm font-bold text-base-content"
-            for="email"
-          >
-            Email
-          </label>
           <Field name="email">
             {(field, props) => (
-              <>
-                <input
-                  {...props}
-                  class={`input input-bordered w-full ${field.error ? "input-error" : ""}`}
-                  type="text"
-                  id="email"
-                  name="email"
-                  placeholder="Enter your email"
-                  value={field.value}
-                />
-                {field.error && <p class="my-1 text-error">{field.error}</p>}
-              </>
+              <TextInput
+                id="email"
+                label="Email"
+                name="email"
+                placeholder="Enter your email"
+                fieldProps={props}
+                field={field}
+              />
             )}
           </Field>
         </div>
         <div class="mb-6">
-          <label
-            class="mb-2 block text-sm font-bold text-base-content"
-            for="password"
-          >
-            Password
-          </label>
           <Field name="password">
             {(field, props) => (
-              <>
-                <input
-                  {...props}
-                  class={`input input-bordered w-full ${field.error ? "input-error" : ""}`}
-                  type="password"
-                  id="password"
-                  name="password"
-                  placeholder="Enter your password"
-                  value={field.value}
-                />
-                {field.error && <p class="my-1 text-error">{field.error}</p>}
-              </>
+              <TextInput
+                label="Password"
+                id="password"
+                name="password"
+                placeholder="Enter your password"
+                type="password"
+                fieldProps={props}
+                field={field}
+              />
             )}
           </Field>
         </div>
