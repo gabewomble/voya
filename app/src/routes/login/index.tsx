@@ -1,6 +1,7 @@
 import { component$ } from "@builder.io/qwik";
 import { routeLoader$, z } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
+import { setCookie } from "~/helpers/set-cookie";
 import { requireNoAuth } from "~/middleware/auth";
 import {
   zodForm$,
@@ -68,12 +69,8 @@ export const useLoginAction = formAction$<LoginForm>(async (data, request) => {
   const json = await res.json();
   const token = json.token;
 
-  request.cookie.set("token", token, {
-    path: "/",
-    httpOnly: true,
-    sameSite: true,
-    secure: false,
-  });
+  setCookie("token", token, request);
+
   throw request.redirect(303, "/trips");
 }, zodForm$(LoginForm));
 

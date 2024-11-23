@@ -70,7 +70,13 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
-	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams(token.Model))
+	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams{
+		TokenHash:    token.Model.Hash,
+		UserID:       token.Model.UserID,
+		TokenExpiry:  token.Model.Expiry,
+		TokenScope:   token.Model.Scope,
+		RefreshToken: token.Model.RefreshToken,
+	})
 	if err != nil {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
@@ -203,7 +209,13 @@ func (s *Server) activateUserHandler(c *gin.Context) {
 		return
 	}
 	// Insert authentication token
-	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams(token.Model))
+	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams{
+		TokenHash:    token.Model.Hash,
+		UserID:       token.Model.UserID,
+		TokenExpiry:  token.Model.Expiry,
+		TokenScope:   token.Model.Scope,
+		RefreshToken: token.Model.RefreshToken,
+	})
 	if err != nil {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return

@@ -20,6 +20,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.GET("/users/current", s.getCurrentUserHandler)
 	r.PUT("/users/activated", s.activateUserHandler)
 	r.POST("/tokens/authenticate", s.createAuthTokenHandler)
+	r.POST("/tokens/refresh", s.refreshAuthTokenHandler)
 
 	protected := r.Group("/")
 	protected.Use(s.requireAuthenticatedUser())

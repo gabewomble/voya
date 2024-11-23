@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -54,19 +55,70 @@ func (s *Server) createAuthTokenHandler(c *gin.Context) {
 		return
 	}
 
-	token, err := data.Token.New(data.Token{}, user.ID, 24*time.Hour, data.TokenScope.Authentication)
+	s.generateAndRespondWithToken(c, user.ID)
+}
+
+func (s *Server) refreshAuthTokenHandler(c *gin.Context) {
+	var input struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := c.BindJSON(&input); err != nil {
+		s.badRequest(c, errorDetailsFromError(err))
+		return
+	}
+
+	v := validator.New()
+	data.ValidateTokenPlaintext(v, input.RefreshToken)
+	if !v.Valid() {
+		s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
+		return
+	}
+
+	refreshHash := data.GetTokenHash(input.RefreshToken)
+	user, err := s.db.Queries().GetUserForRefreshToken(c, repository.GetUserForRefreshTokenParams{
+		RefreshToken: refreshHash[:],
+		TokenScope:   data.TokenScope.Authentication,
+		TokenExpiry:  time.Now(),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.invalidCredentialsResponse(c)
+			return
+		}
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	s.generateAndRespondWithToken(c, user.ID)
+}
+
+func (s *Server) generateAndRespondWithToken(c *gin.Context, userID uuid.UUID) {
+	// Delete the expired tokens for the current user
+	err := s.db.Queries().DeleteExpiredTokensForUser(c, userID)
 	if err != nil {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 
-	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams(token.Model))
+	token, err := data.Token.New(data.Token{}, userID, 24*time.Hour, data.TokenScope.Authentication)
 	if err != nil {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"token": token.Plaintext, "scope": data.TokenScope.Authentication})
+	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams{
+		TokenHash:    token.Model.Hash,
+		UserID:       token.Model.UserID,
+		TokenExpiry:  token.Model.Expiry,
+		TokenScope:   token.Model.Scope,
+		RefreshToken: token.Model.RefreshToken,
+	})
+	if err != nil {
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"token": token.Plaintext, "refresh_token": token.RefreshToken, "scope": data.TokenScope.Authentication})
 }
 
 func (s *Server) deleteAuthTokenHandler(c *gin.Context) {
