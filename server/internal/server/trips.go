@@ -14,7 +14,7 @@ import (
 )
 
 func (s *Server) listTripsHandler(c *gin.Context) {
-	trips, err := s.db.Queries().ListTrips(c)
+	trips, err := s.db.Queries().ListTrips(c, s.ctxGetUser(c).ID)
 	if err != nil {
 		s.errorResponse(c, http.StatusInternalServerError, []ErrorDetail{{Message: err.Error()}})
 		return
@@ -42,6 +42,8 @@ func (s *Server) createTripHandler(c *gin.Context) {
 		return
 	}
 
+	input.OwnerID = s.ctxGetUser(c).ID
+
 	trip, err := s.db.Queries().InsertTrip(c, input)
 
 	if err != nil {
@@ -61,7 +63,12 @@ func (s *Server) getTripByIdHandler(c *gin.Context) {
 		return
 	}
 
-	trip, err := s.db.Queries().GetTripById(c, tripID)
+	user := s.ctxGetUser(c)
+
+	trip, err := s.db.Queries().GetTripById(c, repository.GetTripByIdParams{
+		ID:     tripID,
+		UserID: user.ID,
+	})
 	if err != nil {
 		s.log.LogError(c, "getTripByIdHandler: GetTripById failed", err)
 		switch {
@@ -83,13 +90,19 @@ func (s *Server) deleteTripByIdHandler(c *gin.Context) {
 		return
 	}
 
-	_, err = s.db.Queries().GetTripById(c, tripID)
+	_, err = s.db.Queries().GetTripById(c, repository.GetTripByIdParams{
+		ID:     tripID,
+		UserID: s.ctxGetUser(c).ID,
+	})
 	if err != nil {
 		s.badRequest(c, errorDetailsFromError(err))
 		return
 	}
 
-	err = s.db.Queries().DeleteTripById(c, tripID)
+	err = s.db.Queries().DeleteTripById(c, repository.DeleteTripByIdParams{
+		ID:     tripID,
+		UserID: s.ctxGetUser(c).ID,
+	})
 	if err != nil {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
