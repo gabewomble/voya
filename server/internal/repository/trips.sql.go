@@ -88,6 +88,43 @@ func (q *Queries) GetTripById(ctx context.Context, arg GetTripByIdParams) (Trip,
 	return i, err
 }
 
+const getTripMembers = `-- name: GetTripMembers :many
+SELECT
+    u.id, u.name, u.email
+FROM
+    users u
+INNER JOIN
+    trip_members tm ON u.id = tm.user_id
+WHERE
+    tm.trip_id = $1
+`
+
+type GetTripMembersRow struct {
+	ID    uuid.UUID `json:"id"`
+	Name  string    `json:"name"`
+	Email string    `json:"email"`
+}
+
+func (q *Queries) GetTripMembers(ctx context.Context, tripID uuid.UUID) ([]GetTripMembersRow, error) {
+	rows, err := q.db.Query(ctx, getTripMembers, tripID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTripMembersRow
+	for rows.Next() {
+		var i GetTripMembersRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Email); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertTrip = `-- name: InsertTrip :one
 INSERT INTO
     trips (name, description, owner_id)

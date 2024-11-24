@@ -80,7 +80,17 @@ func (s *Server) getTripByIdHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"trip": trip})
+	members, err := s.db.Queries().GetTripMembers(c, trip.ID)
+	if err != nil {
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	if members == nil {
+		members = make([]repository.GetTripMembersRow, 0)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"trip": trip, "members": members})
 }
 
 func (s *Server) deleteTripByIdHandler(c *gin.Context) {
