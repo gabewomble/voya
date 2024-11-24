@@ -35,8 +35,9 @@ var TokenErr = tokenErrors{
 }
 
 type Token struct {
-	Plaintext string
-	Model     repository.Token
+	Plaintext    string
+	RefreshToken string
+	Model        repository.Token
 }
 
 func (t Token) New(userId uuid.UUID, ttl time.Duration, scope string) (*Token, error) {
@@ -59,6 +60,17 @@ func (t Token) New(userId uuid.UUID, ttl time.Duration, scope string) (*Token, e
 
 	hash := sha256.Sum256([]byte(token.Plaintext))
 	token.Model.Hash = hash[:]
+
+	// Generate refresh token
+	refreshBytes := make([]byte, 16)
+	_, err = rand.Read(refreshBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	token.RefreshToken = base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(refreshBytes)
+	refreshHash := sha256.Sum256([]byte(token.RefreshToken))
+	token.Model.RefreshToken = refreshHash[:]
 
 	return token, nil
 }

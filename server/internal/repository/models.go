@@ -12,10 +12,11 @@ import (
 )
 
 type Token struct {
-	Hash   []byte    `json:"hash"`
-	UserID uuid.UUID `json:"user_id"`
-	Expiry time.Time `json:"expiry"`
-	Scope  string    `json:"scope"`
+	Hash         []byte    `json:"hash"`
+	UserID       uuid.UUID `json:"user_id"`
+	Expiry       time.Time `json:"expiry"`
+	Scope        string    `json:"scope"`
+	RefreshToken []byte    `json:"refresh_token"`
 }
 
 type Trip struct {

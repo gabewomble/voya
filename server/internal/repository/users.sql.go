@@ -72,6 +72,45 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 	return i, err
 }
 
+const getUserForRefreshToken = `-- name: GetUserForRefreshToken :one
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version
+FROM
+    users
+    INNER JOIN tokens ON users.id = tokens.user_id
+WHERE
+    tokens.refresh_token = $1
+    AND tokens.scope = $2
+    AND tokens.expiry > $3
+`
+
+type GetUserForRefreshTokenParams struct {
+	RefreshToken []byte    `json:"refresh_token"`
+	TokenScope   string    `json:"token_scope"`
+	TokenExpiry  time.Time `json:"token_expiry"`
+}
+
+func (q *Queries) GetUserForRefreshToken(ctx context.Context, arg GetUserForRefreshTokenParams) (User, error) {
+	row := q.db.QueryRow(ctx, getUserForRefreshToken, arg.RefreshToken, arg.TokenScope, arg.TokenExpiry)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.Name,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Activated,
+		&i.Version,
+	)
+	return i, err
+}
+
 const getUserForToken = `-- name: GetUserForToken :one
 SELECT
     id,

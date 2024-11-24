@@ -51,6 +51,23 @@ WHERE
     AND tokens.scope = @token_scope
     AND tokens.expiry > @token_expiry;
 
+-- name: GetUserForRefreshToken :one
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version
+FROM
+    users
+    INNER JOIN tokens ON users.id = tokens.user_id
+WHERE
+    tokens.refresh_token = @refresh_token
+    AND tokens.scope = @token_scope
+    AND tokens.expiry > @token_expiry;
+
 -- name: UpdateUser :one
 UPDATE
     users

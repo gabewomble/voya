@@ -30,6 +30,19 @@ func (q *Queries) DeleteAllTokensForUser(ctx context.Context, arg DeleteAllToken
 	return err
 }
 
+const deleteExpiredTokensForUser = `-- name: DeleteExpiredTokensForUser :exec
+DELETE FROM
+    tokens
+WHERE
+    user_id = $1
+    AND expiry < NOW()
+`
+
+func (q *Queries) DeleteExpiredTokensForUser(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteExpiredTokensForUser, userID)
+	return err
+}
+
 const deleteToken = `-- name: DeleteToken :exec
 DELETE FROM
     tokens
@@ -44,24 +57,32 @@ func (q *Queries) DeleteToken(ctx context.Context, tokenHash []byte) error {
 
 const insertToken = `-- name: InsertToken :exec
 INSERT INTO
-    tokens (hash, user_id, expiry, scope)
+    tokens (hash, user_id, expiry, scope, refresh_token)
 VALUES
-    ($1, $2, $3, $4)
+    (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5
+    )
 `
 
 type InsertTokenParams struct {
-	Hash   []byte    `json:"hash"`
-	UserID uuid.UUID `json:"user_id"`
-	Expiry time.Time `json:"expiry"`
-	Scope  string    `json:"scope"`
+	TokenHash    []byte    `json:"token_hash"`
+	UserID       uuid.UUID `json:"user_id"`
+	TokenExpiry  time.Time `json:"token_expiry"`
+	TokenScope   string    `json:"token_scope"`
+	RefreshToken []byte    `json:"refresh_token"`
 }
 
 func (q *Queries) InsertToken(ctx context.Context, arg InsertTokenParams) error {
 	_, err := q.db.Exec(ctx, insertToken,
-		arg.Hash,
+		arg.TokenHash,
 		arg.UserID,
-		arg.Expiry,
-		arg.Scope,
+		arg.TokenExpiry,
+		arg.TokenScope,
+		arg.RefreshToken,
 	)
 	return err
 }
