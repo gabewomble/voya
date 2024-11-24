@@ -1,16 +1,16 @@
 import { component$ } from "@builder.io/qwik";
 import { routeLoader$, type DocumentHead } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
-import type { Trip } from "~/types/trips";
+import { listTripsResponseSchema } from "~/types/api";
 
 export const useGetTrips = routeLoader$(async (request) => {
   const res = await serverFetch("/trips", {}, request);
   const json = await res.json();
-  return (json?.trips ?? []) as Trip[];
+  return listTripsResponseSchema.parse(json);
 });
 
 export default component$(() => {
-  const trips = useGetTrips();
+  const { trips } = useGetTrips().value;
   return (
     <>
       <div class="container mx-auto py-8">
@@ -21,7 +21,7 @@ export default component$(() => {
           </a>
         </div>
         <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {trips.value.map((trip) => (
+          {trips.map((trip) => (
             <div key={trip.id} class="card bg-base-200 shadow-lg">
               <div class="card-body">
                 <h2 class="card-title">{trip.name}</h2>

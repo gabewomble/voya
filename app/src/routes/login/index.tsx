@@ -17,12 +17,12 @@ export const onGet = requireNoAuth;
 
 const invalidCredentialError = "invalid authentication credentials";
 
-const LoginForm = z.object({
+const loginFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-type LoginForm = z.infer<typeof LoginForm>;
+type LoginForm = z.infer<typeof loginFormSchema>;
 
 export const useLoginAction = formAction$<LoginForm>(async (data, request) => {
   const email = data.email;
@@ -72,7 +72,7 @@ export const useLoginAction = formAction$<LoginForm>(async (data, request) => {
   setCookie("token", token, request);
 
   throw request.redirect(303, "/trips");
-}, zodForm$(LoginForm));
+}, zodForm$(loginFormSchema));
 
 export const useFormLoader = routeLoader$<InitialValues<LoginForm>>(() => ({
   email: "",
@@ -83,7 +83,7 @@ export default component$(() => {
   const [loginForm, { Form, Field }] = useForm<LoginForm>({
     loader: useFormLoader(),
     action: useLoginAction(),
-    validate: zodForm$(LoginForm),
+    validate: zodForm$(loginFormSchema),
     revalidateOn: "blur",
   });
 

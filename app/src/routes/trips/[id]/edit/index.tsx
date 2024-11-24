@@ -2,15 +2,13 @@ import { useTripData } from "../layout";
 import { component$ } from "@builder.io/qwik";
 
 export default component$(() => {
-  const trip = useTripData();
+  const { trip } = useTripData().value;
 
   return (
     <div class="container mx-auto py-8">
       <div class="card bg-base-200 shadow-lg">
         <div class="card-body">
-          <h1 class="card-title text-4xl font-bold">
-            Editing: {trip.value.name}
-          </h1>
+          <h1 class="card-title text-4xl font-bold">Editing: {trip.name}</h1>
           <form class="mt-4 flex flex-col gap-4">
             <label class="form-control w-full">
               <div class="label">
@@ -19,7 +17,7 @@ export default component$(() => {
               <input
                 type="text"
                 placeholder="A name for your trip"
-                value={trip.value.name}
+                value={trip.name}
                 class="input input-bordered w-full"
               />
             </label>
@@ -30,14 +28,14 @@ export default component$(() => {
               <textarea
                 class="textarea textarea-bordered h-24"
                 placeholder="A description for your trip"
-                value={trip.value.description}
+                value={trip.description}
               ></textarea>
             </label>
             <div class="card-actions justify-end">
               <button class="btn btn-primary" type="submit">
                 Save changes
               </button>
-              <a href={`/trips/${trip.value.id}`} class="btn btn-secondary">
+              <a href={`/trips/${trip.id}`} class="btn btn-secondary">
                 Cancel
               </a>
             </div>

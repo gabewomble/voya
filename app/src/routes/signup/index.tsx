@@ -14,7 +14,7 @@ import { mapServerErrors } from "~/helpers/map-server-errors";
 
 export const onGet = requireNoAuth;
 
-const SignupForm = z
+const signupFormSchema = z
   .object({
     name: z
       .string()
@@ -39,7 +39,7 @@ const SignupForm = z
     }
   });
 
-type SignupForm = z.infer<typeof SignupForm>;
+type SignupForm = z.infer<typeof signupFormSchema>;
 
 export const useSignupAction = formAction$<SignupForm>(
   async (data, request) => {
@@ -90,7 +90,7 @@ export const useSignupAction = formAction$<SignupForm>(
 
     throw request.redirect(303, "/activate");
   },
-  zodForm$(SignupForm),
+  zodForm$(signupFormSchema),
 );
 
 export const useSignupFormLoader = routeLoader$<InitialValues<SignupForm>>(
@@ -106,7 +106,7 @@ export default component$(() => {
   const [signupForm, { Form, Field }] = useForm<SignupForm>({
     loader: useSignupFormLoader(),
     action: useSignupAction(),
-    validate: zodForm$(SignupForm),
+    validate: zodForm$(signupFormSchema),
     validateOn: "blur",
     revalidateOn: "blur",
   });

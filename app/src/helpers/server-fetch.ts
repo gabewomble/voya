@@ -1,6 +1,6 @@
 import type { RequestEventBase } from "@builder.io/qwik-city";
 import { setCookie } from "./set-cookie";
-import { ErrorResponseSchema } from "~/types/server-errors";
+import { errorResponseSchema } from "~/types/server-errors";
 import { SERVER_ERROR_MESSAGES } from "~/constants/server-errors";
 
 export async function serverFetch(
@@ -27,7 +27,7 @@ export async function serverFetch(
   });
 
   if (res.status === 401 && token) {
-    const errorResponse = ErrorResponseSchema.safeParse(await res.json());
+    const errorResponse = errorResponseSchema.safeParse(await res.json());
     if (!errorResponse.success) return res;
 
     const isAuthError = errorResponse.data.errors.some(

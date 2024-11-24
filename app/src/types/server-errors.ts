@@ -1,6 +1,6 @@
 import { z } from "@builder.io/qwik-city";
 
-export const ErrorResponseSchema = z.object({
+export const errorResponseSchema = z.object({
   errors: z.array(
     z.object({
       message: z.string(),
@@ -9,4 +9,4 @@ export const ErrorResponseSchema = z.object({
   ),
 });
 
-export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
+export type ErrorResponse = z.infer<typeof errorResponseSchema>;

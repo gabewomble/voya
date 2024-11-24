@@ -5,6 +5,6 @@ export function setCookie(key: string, value: string, ctx: RequestEventBase) {
     path: "/",
     httpOnly: true,
     sameSite: true,
-    secure: false,
+    secure: true,
   });
 }
