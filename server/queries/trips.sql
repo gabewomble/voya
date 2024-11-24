@@ -58,3 +58,14 @@ DELETE FROM
 WHERE
     trip_id = @trip_id
     AND user_id = @user_id;
+
+-- name: GetTripMembers :many
+SELECT
+    u.id,
+    u.name,
+    u.email
+FROM
+    users u
+    INNER JOIN trip_members tm ON u.id = tm.user_id
+WHERE
+    tm.trip_id = @trip_id;
