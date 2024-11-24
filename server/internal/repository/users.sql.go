@@ -12,6 +12,24 @@ import (
 	"github.com/google/uuid"
 )
 
+const checkUsernameExists = `-- name: CheckUsernameExists :one
+SELECT EXISTS (
+    SELECT
+        1
+    FROM
+        users
+    WHERE
+        username = $1
+)
+`
+
+func (q *Queries) CheckUsernameExists(ctx context.Context, username string) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUsernameExists, username)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT
     id,
@@ -20,7 +38,8 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
 WHERE
@@ -38,6 +57,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.PasswordHash,
 		&i.Activated,
 		&i.Version,
+		&i.Username,
 	)
 	return i, err
 }
@@ -50,7 +70,8 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
 WHERE
@@ -68,6 +89,7 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.PasswordHash,
 		&i.Activated,
 		&i.Version,
+		&i.Username,
 	)
 	return i, err
 }
@@ -96,9 +118,19 @@ type GetUserForRefreshTokenParams struct {
 	TokenExpiry  time.Time `json:"token_expiry"`
 }
 
-func (q *Queries) GetUserForRefreshToken(ctx context.Context, arg GetUserForRefreshTokenParams) (User, error) {
+type GetUserForRefreshTokenRow struct {
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	Name         string    `json:"name"`
+	Email        string    `json:"email"`
+	PasswordHash []byte    `json:"password_hash"`
+	Activated    bool      `json:"activated"`
+	Version      int32     `json:"version"`
+}
+
+func (q *Queries) GetUserForRefreshToken(ctx context.Context, arg GetUserForRefreshTokenParams) (GetUserForRefreshTokenRow, error) {
 	row := q.db.QueryRow(ctx, getUserForRefreshToken, arg.RefreshToken, arg.TokenScope, arg.TokenExpiry)
-	var i User
+	var i GetUserForRefreshTokenRow
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
@@ -119,7 +151,8 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
     INNER JOIN tokens ON users.id = tokens.user_id
@@ -146,8 +179,44 @@ func (q *Queries) GetUserForToken(ctx context.Context, arg GetUserForTokenParams
 		&i.PasswordHash,
 		&i.Activated,
 		&i.Version,
+		&i.Username,
 	)
 	return i, err
+}
+
+const getUsersWithoutUsername = `-- name: GetUsersWithoutUsername :many
+SELECT
+    id,
+    email
+FROM
+    users
+WHERE
+    username = 'default_username'
+`
+
+type GetUsersWithoutUsernameRow struct {
+	ID    uuid.UUID `json:"id"`
+	Email string    `json:"email"`
+}
+
+func (q *Queries) GetUsersWithoutUsername(ctx context.Context) ([]GetUsersWithoutUsernameRow, error) {
+	rows, err := q.db.Query(ctx, getUsersWithoutUsername)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUsersWithoutUsernameRow
+	for rows.Next() {
+		var i GetUsersWithoutUsernameRow
+		if err := rows.Scan(&i.ID, &i.Email); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertUser = `-- name: InsertUser :one
@@ -219,4 +288,23 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (int32, 
 	var version int32
 	err := row.Scan(&version)
 	return version, err
+}
+
+const updateUsername = `-- name: UpdateUsername :exec
+UPDATE
+    users
+SET
+    username = $1
+WHERE
+    id = $2
+`
+
+type UpdateUsernameParams struct {
+	Username string    `json:"username"`
+	ID       uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateUsername(ctx context.Context, arg UpdateUsernameParams) error {
+	_, err := q.db.Exec(ctx, updateUsername, arg.Username, arg.ID)
+	return err
 }

@@ -14,7 +14,8 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
 WHERE
@@ -28,7 +29,8 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
 WHERE
@@ -42,7 +44,8 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
     INNER JOIN tokens ON users.id = tokens.user_id
@@ -80,3 +83,31 @@ SET
 WHERE
     id = @id
     AND version = @version RETURNING version;
+
+-- name: GetUsersWithoutUsername :many
+SELECT
+    id,
+    email
+FROM
+    users
+WHERE
+    username = 'default_username';
+
+-- name: CheckUsernameExists :one
+SELECT
+    EXISTS (
+        SELECT
+            1
+        FROM
+            users
+        WHERE
+            username = @username
+    );
+
+-- name: UpdateUsername :exec
+UPDATE
+    users
+SET
+    username = @username
+WHERE
+    id = @id;
