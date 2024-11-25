@@ -18,14 +18,14 @@ export const onGet = requireNoAuth;
 const invalidCredentialError = "invalid authentication credentials";
 
 const loginFormSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  identifier: z.string(),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 type LoginForm = z.infer<typeof loginFormSchema>;
 
 export const useLoginAction = formAction$<LoginForm>(async (data, request) => {
-  const email = data.email;
+  const identifier = data.identifier;
   const password = data.password;
 
   const res = await serverFetch(
@@ -36,7 +36,7 @@ export const useLoginAction = formAction$<LoginForm>(async (data, request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        email,
+        identifier,
         password,
       }),
     },
@@ -49,10 +49,10 @@ export const useLoginAction = formAction$<LoginForm>(async (data, request) => {
     const { messages, fields } = mapServerErrors({
       errors,
       messages: {
-        [invalidCredentialError]: "Invalid email or password",
+        [invalidCredentialError]: "Invalid credentials",
       },
       fields: {
-        email: {},
+        identifier: {},
         password: {},
       },
     });
@@ -60,7 +60,7 @@ export const useLoginAction = formAction$<LoginForm>(async (data, request) => {
     return {
       message: messages[0],
       errors: {
-        email: fields.email[0],
+        identifier: fields.identifier[0],
         password: fields.password[0],
       },
     };
@@ -75,7 +75,7 @@ export const useLoginAction = formAction$<LoginForm>(async (data, request) => {
 }, zodForm$(loginFormSchema));
 
 export const useFormLoader = routeLoader$<InitialValues<LoginForm>>(() => ({
-  email: "",
+  identifier: "",
   password: "",
 }));
 
@@ -95,13 +95,13 @@ export default component$(() => {
           <p class="my-2 text-error">{loginForm.response.message}</p>
         )}
         <div class="mb-4">
-          <Field name="email">
+          <Field name="identifier">
             {(field, props) => (
               <TextInput
-                id="email"
-                label="Email"
-                name="email"
-                placeholder="Enter your email"
+                id="identifier"
+                label="Username or Email"
+                name="identifier"
+                placeholder="Enter your username or email"
                 fieldProps={props}
                 field={field}
               />
