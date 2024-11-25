@@ -29,6 +29,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 		protected.DELETE("/tokens/current", s.deleteAuthTokenHandler)
 		// Users
 		protected.GET("/users/:username", s.getUserByUsernameHandler)
+		protected.PATCH("/users/:username", s.updateUserProfileHandler)
 
 		// Trips
 		protected.GET("/trips", s.listTripsHandler)

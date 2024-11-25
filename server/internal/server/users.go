@@ -13,7 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 var appUrl = os.Getenv("APP_URL")
@@ -59,14 +58,8 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 
 	user, err := s.db.Queries().InsertUser(c, insertUserParams)
 	if err != nil {
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
-			if pgErr.ConstraintName == "users_email_key" {
-				v.AddError("email", "duplicate email")
-			}
-			if pgErr.ConstraintName == "idx_users_username" {
-				v.AddError("username", "duplicate username")
-			}
-
+		data.ExtractUserValidationErrors(v, err)
+		if !v.Valid() {
 			s.badRequest(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
 			return
 		}
@@ -232,4 +225,68 @@ func (s *Server) activateUserHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"token": token.Plaintext})
+}
+
+func (s *Server) updateUserProfileHandler(c *gin.Context) {
+	originalUser := s.ctxGetUser(c)
+	requestUsername := c.Param("username")
+
+	if originalUser.Username != requestUsername {
+		s.statusForbidden(c)
+		return
+	}
+
+	var input struct {
+		Username string `json:"username"`
+		Name     string `json:"name"`
+	}
+
+	if err := c.BindJSON(&input); err != nil {
+		s.badRequest(c, errorDetailsFromError(err))
+		return
+	}
+
+	v := validator.New()
+
+	data.ValidateName(v, input.Name)
+	data.ValidateUsername(v, input.Username)
+
+	if !v.Valid() {
+		s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
+		return
+	}
+
+	// Update user
+	userVersion, err := s.db.Queries().UpdateUser(c, repository.UpdateUserParams{
+		// New fields
+		Name:     input.Name,
+		Username: input.Username,
+		// Original fields
+		Activated:    originalUser.Activated,
+		Email:        originalUser.Email,
+		ID:           originalUser.ID,
+		PasswordHash: originalUser.PasswordHash,
+		Version:      originalUser.Version,
+	})
+
+	if err != nil {
+		data.ExtractUserValidationErrors(v, err)
+		if !v.Valid() {
+			s.badRequest(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
+			return
+		}
+
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": sanitizeUser(&repository.User{
+		ID:        originalUser.ID,
+		CreatedAt: originalUser.CreatedAt,
+		Name:      input.Name,
+		Email:     originalUser.Email,
+		Activated: originalUser.Activated,
+		Version:   userVersion,
+		Username:  input.Username,
+	})})
 }
