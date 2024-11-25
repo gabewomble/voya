@@ -60,8 +60,13 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	user, err := s.db.Queries().InsertUser(c, insertUserParams)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
-			s.log.LogError(c, "Failed to insert user", err, "email", userInput.Email)
-			v.AddError("email", "duplicate email")
+			if pgErr.ConstraintName == "users_email_key" {
+				v.AddError("email", "duplicate email")
+			}
+			if pgErr.ConstraintName == "idx_users_username" {
+				v.AddError("username", "duplicate username")
+			}
+
 			s.badRequest(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
 			return
 		}

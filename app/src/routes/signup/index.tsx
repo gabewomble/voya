@@ -16,10 +16,10 @@ export const onGet = requireNoAuth;
 
 const signupFormSchema = z
   .object({
-    name: z
+    username: z
       .string()
-      .min(1, "Name is required")
-      .max(50, "Name cannot be longer than 50 characters"),
+      .min(1, "Username is required")
+      .max(30, "Username cannot be longer than 30 characters"),
     email: z.string().email("Invalid email address"),
     password: z
       .string()
@@ -43,7 +43,7 @@ type SignupForm = z.infer<typeof signupFormSchema>;
 
 export const useSignupAction = formAction$<SignupForm>(
   async (data, request) => {
-    const { name, email, password } = data;
+    const { username, email, password } = data;
 
     const res = await serverFetch(
       "/users",
@@ -53,7 +53,8 @@ export const useSignupAction = formAction$<SignupForm>(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name,
+          username,
+          name: username,
           email,
           password,
         }),
@@ -70,7 +71,9 @@ export const useSignupAction = formAction$<SignupForm>(
         errors,
         messages: {},
         fields: {
-          name: {},
+          username: {
+            "duplicate username": "Username is already in use",
+          },
           email: {
             "duplicate email": "Email is already in use",
           },
@@ -81,7 +84,7 @@ export const useSignupAction = formAction$<SignupForm>(
       return {
         message: messages[0],
         errors: {
-          name: fields.name[0],
+          username: fields.username[0],
           email: fields.email[0],
           password: fields.password[0],
         },
@@ -95,7 +98,7 @@ export const useSignupAction = formAction$<SignupForm>(
 
 export const useSignupFormLoader = routeLoader$<InitialValues<SignupForm>>(
   () => ({
-    name: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -119,13 +122,13 @@ export default component$(() => {
           <p class="my-2 text-error">{signupForm.response.message}</p>
         )}
         <div class="mb-4">
-          <Field name="name">
+          <Field name="username">
             {(field, props) => (
               <TextInput
-                id="name"
-                label="Name"
-                name="name"
-                placeholder="Enter your name"
+                id="username"
+                label="Username"
+                name="username"
+                placeholder="Enter your username"
                 field={field}
                 fieldProps={props}
               />
