@@ -20,6 +20,7 @@ var appUrl = os.Getenv("APP_URL")
 
 func (s *Server) registerUserHandler(c *gin.Context) {
 	var input struct {
+		Username string `json:"username"`
 		Name     string `json:"name"`
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -31,8 +32,9 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 	}
 
 	userInput := &data.UserInput{
-		Name:  input.Name,
-		Email: input.Email,
+		Username: input.Username,
+		Name:     input.Name,
+		Email:    input.Email,
 	}
 
 	userInput.Password.Set(input.Password)
@@ -46,15 +48,19 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 
 	// Insert user
 	insertUserParams := repository.InsertUserParams{
+		Username:     userInput.Username,
 		Name:         userInput.Name,
 		Email:        userInput.Email,
 		PasswordHash: userInput.Password.Hash,
 		Activated:    false,
 	}
 
+	s.log.LogInfo(c, "Inserting user", "username", userInput.Username, "email", userInput.Email)
+
 	user, err := s.db.Queries().InsertUser(c, insertUserParams)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+			s.log.LogError(c, "Failed to insert user", err, "email", userInput.Email)
 			v.AddError("email", "duplicate email")
 			s.badRequest(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
 			return
@@ -105,6 +111,7 @@ type cleanUser struct {
 	Email     string    `json:"email"`
 	Activated bool      `json:"activated"`
 	Version   int32     `json:"version"`
+	Username  string    `json:"username"`
 }
 
 func sanitizeUser(u *repository.User) cleanUser {
@@ -114,7 +121,9 @@ func sanitizeUser(u *repository.User) cleanUser {
 		Name:      u.Name,
 		Email:     u.Email,
 		Activated: u.Activated,
-		Version:   u.Version}
+		Version:   u.Version,
+		Username:  u.Username,
+	}
 }
 
 func (s *Server) getCurrentUserHandler(c *gin.Context) {
@@ -188,6 +197,7 @@ func (s *Server) activateUserHandler(c *gin.Context) {
 		Name:         user.Name,
 		PasswordHash: user.PasswordHash,
 		Version:      user.Version,
+		Username:     user.Username,
 	})
 	if err != nil {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))

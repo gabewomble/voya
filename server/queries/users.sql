@@ -1,8 +1,14 @@
 -- name: InsertUser :one
 INSERT INTO
-    users (name, email, password_hash, activated)
+    users (name, email, username, password_hash, activated)
 VALUES
-    (@name, @email, @password_hash, @activated) RETURNING id,
+    (
+        @name,
+        @email,
+        @username,
+        @password_hash,
+        @activated
+    ) RETURNING id,
     created_at,
     version;
 
@@ -14,11 +20,27 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
 WHERE
     email = @email;
+
+-- name: GetUserByUsername :one
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version,
+    username
+FROM
+    users
+WHERE
+    username = @username;
 
 -- name: GetUserById :one
 SELECT
@@ -28,7 +50,8 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
 WHERE
@@ -42,7 +65,8 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
     INNER JOIN tokens ON users.id = tokens.user_id
@@ -74,9 +98,21 @@ UPDATE
 SET
     name = @name,
     email = @email,
+    username = @username,
     password_hash = @password_hash,
     activated = @activated,
     version = version + 1
 WHERE
     id = @id
     AND version = @version RETURNING version;
+
+-- name: CheckUsernameExists :one
+SELECT
+    EXISTS (
+        SELECT
+            1
+        FROM
+            users
+        WHERE
+            username = @username
+    );

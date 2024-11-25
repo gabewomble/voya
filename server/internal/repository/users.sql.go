@@ -12,6 +12,25 @@ import (
 	"github.com/google/uuid"
 )
 
+const checkUsernameExists = `-- name: CheckUsernameExists :one
+SELECT
+    EXISTS (
+        SELECT
+            1
+        FROM
+            users
+        WHERE
+            username = $1
+    )
+`
+
+func (q *Queries) CheckUsernameExists(ctx context.Context, username string) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUsernameExists, username)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT
     id,
@@ -20,7 +39,8 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
 WHERE
@@ -38,6 +58,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.PasswordHash,
 		&i.Activated,
 		&i.Version,
+		&i.Username,
 	)
 	return i, err
 }
@@ -50,7 +71,8 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
 WHERE
@@ -68,6 +90,39 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.PasswordHash,
 		&i.Activated,
 		&i.Version,
+		&i.Username,
+	)
+	return i, err
+}
+
+const getUserByUsername = `-- name: GetUserByUsername :one
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version,
+    username
+FROM
+    users
+WHERE
+    username = $1
+`
+
+func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByUsername, username)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.Name,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Activated,
+		&i.Version,
+		&i.Username,
 	)
 	return i, err
 }
@@ -96,9 +151,19 @@ type GetUserForRefreshTokenParams struct {
 	TokenExpiry  time.Time `json:"token_expiry"`
 }
 
-func (q *Queries) GetUserForRefreshToken(ctx context.Context, arg GetUserForRefreshTokenParams) (User, error) {
+type GetUserForRefreshTokenRow struct {
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	Name         string    `json:"name"`
+	Email        string    `json:"email"`
+	PasswordHash []byte    `json:"password_hash"`
+	Activated    bool      `json:"activated"`
+	Version      int32     `json:"version"`
+}
+
+func (q *Queries) GetUserForRefreshToken(ctx context.Context, arg GetUserForRefreshTokenParams) (GetUserForRefreshTokenRow, error) {
 	row := q.db.QueryRow(ctx, getUserForRefreshToken, arg.RefreshToken, arg.TokenScope, arg.TokenExpiry)
-	var i User
+	var i GetUserForRefreshTokenRow
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
@@ -119,7 +184,8 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
     INNER JOIN tokens ON users.id = tokens.user_id
@@ -146,15 +212,22 @@ func (q *Queries) GetUserForToken(ctx context.Context, arg GetUserForTokenParams
 		&i.PasswordHash,
 		&i.Activated,
 		&i.Version,
+		&i.Username,
 	)
 	return i, err
 }
 
 const insertUser = `-- name: InsertUser :one
 INSERT INTO
-    users (name, email, password_hash, activated)
+    users (name, email, username, password_hash, activated)
 VALUES
-    ($1, $2, $3, $4) RETURNING id,
+    (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5
+    ) RETURNING id,
     created_at,
     version
 `
@@ -162,6 +235,7 @@ VALUES
 type InsertUserParams struct {
 	Name         string `json:"name"`
 	Email        string `json:"email"`
+	Username     string `json:"username"`
 	PasswordHash []byte `json:"password_hash"`
 	Activated    bool   `json:"activated"`
 }
@@ -176,6 +250,7 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (InsertU
 	row := q.db.QueryRow(ctx, insertUser,
 		arg.Name,
 		arg.Email,
+		arg.Username,
 		arg.PasswordHash,
 		arg.Activated,
 	)
@@ -190,17 +265,19 @@ UPDATE
 SET
     name = $1,
     email = $2,
-    password_hash = $3,
-    activated = $4,
+    username = $3,
+    password_hash = $4,
+    activated = $5,
     version = version + 1
 WHERE
-    id = $5
-    AND version = $6 RETURNING version
+    id = $6
+    AND version = $7 RETURNING version
 `
 
 type UpdateUserParams struct {
 	Name         string    `json:"name"`
 	Email        string    `json:"email"`
+	Username     string    `json:"username"`
 	PasswordHash []byte    `json:"password_hash"`
 	Activated    bool      `json:"activated"`
 	ID           uuid.UUID `json:"id"`
@@ -211,6 +288,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (int32, 
 	row := q.db.QueryRow(ctx, updateUser,
 		arg.Name,
 		arg.Email,
+		arg.Username,
 		arg.PasswordHash,
 		arg.Activated,
 		arg.ID,

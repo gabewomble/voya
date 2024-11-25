@@ -15,8 +15,8 @@ import (
 
 func (s *Server) createAuthTokenHandler(c *gin.Context) {
 	var input struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Identifier string `json:"identifier"`
+		Password   string `json:"password"`
 	}
 
 	if err := c.BindJSON(&input); err != nil {
@@ -26,7 +26,7 @@ func (s *Server) createAuthTokenHandler(c *gin.Context) {
 
 	v := validator.New()
 
-	data.ValidateUserEmail(v, input.Email)
+	// Validate Password
 	data.ValidateUserPasswordPlaintext(v, input.Password)
 
 	if !v.Valid() {
@@ -34,13 +34,38 @@ func (s *Server) createAuthTokenHandler(c *gin.Context) {
 		return
 	}
 
-	user, err := s.db.Queries().GetUserByEmail(c, input.Email)
+	isEmail := validator.Matches(input.Identifier, validator.EmailRX)
+
+	var user repository.User
+	var err error
+
+	if isEmail {
+		data.ValidateUserEmail(v, input.Identifier)
+		if !v.Valid() {
+			s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
+			return
+		}
+		user, err = s.db.Queries().GetUserByEmail(c, input.Identifier)
+	} else {
+		data.ValidateUsername(v, input.Identifier)
+		if !v.Valid() {
+			s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
+			return
+		}
+		user, err = s.db.Queries().GetUserByUsername(c, input.Identifier)
+	}
+
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			s.invalidCredentialsResponse(c)
 			return
 		}
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	if !user.Activated {
+		s.statusForbidden(c)
 		return
 	}
 

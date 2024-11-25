@@ -43,4 +43,5 @@ type User struct {
 	PasswordHash []byte    `json:"password_hash"`
 	Activated    bool      `json:"activated"`
 	Version      int32     `json:"version"`
+	Username     string    `json:"username"`
 }

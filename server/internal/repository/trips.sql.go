@@ -90,11 +90,12 @@ func (q *Queries) GetTripById(ctx context.Context, arg GetTripByIdParams) (Trip,
 
 const getTripMembers = `-- name: GetTripMembers :many
 SELECT
-    u.id, u.name, u.email
+    u.id,
+    u.name,
+    u.email
 FROM
     users u
-INNER JOIN
-    trip_members tm ON u.id = tm.user_id
+    INNER JOIN trip_members tm ON u.id = tm.user_id
 WHERE
     tm.trip_id = $1
 `
