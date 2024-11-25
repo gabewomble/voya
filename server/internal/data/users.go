@@ -5,6 +5,7 @@ import (
 	"server/internal/repository"
 	"server/internal/validator"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -18,6 +19,16 @@ type UserInput struct {
 type password struct {
 	plaintext *string
 	Hash      []byte
+}
+
+type userConstraints struct {
+	UniqueEmail    string
+	UniqueUsername string
+}
+
+var UserConstraint = userConstraints{
+	UniqueEmail:    "users_email_key",
+	UniqueUsername: "idx_users_username",
 }
 
 var AnonymousUser = &repository.User{}
@@ -71,6 +82,17 @@ func ValidateUserPasswordPlaintext(v *validator.Validator, pt string) {
 func ValidateName(v *validator.Validator, name string) {
 	v.CheckStrNotEmpty(name, "name")
 	v.Check(len(name) <= 30, "name", "must not be more than 30 characters long")
+}
+
+func ExtractUserValidationErrors(v *validator.Validator, err error) {
+	if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+		if pgErr.ConstraintName == UserConstraint.UniqueEmail {
+			v.AddError("email", "duplicate email")
+		}
+		if pgErr.ConstraintName == UserConstraint.UniqueUsername {
+			v.AddError("username", "duplicate username")
+		}
+	}
 }
 
 func (u UserInput) Validate(v *validator.Validator) {

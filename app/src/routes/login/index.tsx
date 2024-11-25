@@ -18,16 +18,13 @@ export const onGet = requireNoAuth;
 const invalidCredentialError = "invalid authentication credentials";
 
 const loginFormSchema = z.object({
-  identifier: z.string(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  identifier: z.string().min(1, "Username or email is required"),
+  password: z.string().min(1, "Password is required"),
 });
 
 type LoginForm = z.infer<typeof loginFormSchema>;
 
 export const useLoginAction = formAction$<LoginForm>(async (data, request) => {
-  const identifier = data.identifier;
-  const password = data.password;
-
   const res = await serverFetch(
     "/tokens/authenticate",
     {
@@ -35,10 +32,7 @@ export const useLoginAction = formAction$<LoginForm>(async (data, request) => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        identifier,
-        password,
-      }),
+      body: JSON.stringify(data),
     },
     request,
   );
