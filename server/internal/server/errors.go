@@ -45,6 +45,10 @@ func errorDetailsFromValidator(arg ErrorDetailFromValidatorInput) []ErrorDetail 
 	return response
 }
 
+func (s *Server) statusForbidden(c *gin.Context) {
+	s.errorResponse(c, http.StatusForbidden, errorDetailsFromMessage("access forbidden"))
+}
+
 func (s *Server) unprocessableEntity(c *gin.Context, errors []ErrorDetail) {
 	s.errorResponse(c, http.StatusUnprocessableEntity, errors)
 }

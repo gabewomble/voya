@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -34,9 +33,6 @@ func NewServer() *http.Server {
 		log:    logger.New(),
 		mailer: mailer.New(),
 	}
-
-	ctx := context.Background()
-	NewServer.generateDefaultUsernamesForUsers(ctx)
 
 	// Declare Server config
 	server := &http.Server{

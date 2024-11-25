@@ -9,6 +9,7 @@ import (
 )
 
 type UserInput struct {
+	Username string
 	Name     string
 	Email    string
 	Password password
@@ -51,6 +52,11 @@ func CompareUserHashAndPassword(hash []byte, pt string) (bool, error) {
 	return true, nil
 }
 
+func ValidateUsername(v *validator.Validator, username string) {
+	v.CheckStrNotEmpty(username, "username")
+	v.Check(len(username) <= 30, "username", "must not be more than 30 characters long")
+}
+
 func ValidateUserEmail(v *validator.Validator, email string) {
 	v.CheckStrNotEmpty(email, "email")
 	v.Check(validator.Matches(email, validator.EmailRX), "email", "must be a valid email address")
@@ -58,17 +64,18 @@ func ValidateUserEmail(v *validator.Validator, email string) {
 
 func ValidateUserPasswordPlaintext(v *validator.Validator, pt string) {
 	v.CheckStrNotEmpty(pt, "password")
-	v.Check(len(pt) >= 8, "password", "must be at least 8 bytes long")
-	v.Check(len(pt) <= 72, "password", "must not be more than 72 bytes long")
+	v.Check(len(pt) >= 8, "password", "must be at least 8 characters long")
+	v.Check(len(pt) <= 72, "password", "must not be more than 72 characters long")
 }
 
-func ValidateUserName(v *validator.Validator, name string) {
+func ValidateName(v *validator.Validator, name string) {
 	v.CheckStrNotEmpty(name, "name")
-	v.Check(len(name) <= 500, "name", "must not be more than 500 bytes long")
+	v.Check(len(name) <= 30, "name", "must not be more than 30 characters long")
 }
 
 func (u UserInput) Validate(v *validator.Validator) {
-	ValidateUserName(v, u.Name)
+	ValidateUsername(v, u.Username)
+	ValidateName(v, u.Name)
 	ValidateUserEmail(v, u.Email)
 
 	if u.Password.plaintext != nil {

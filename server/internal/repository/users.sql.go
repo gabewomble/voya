@@ -13,14 +13,15 @@ import (
 )
 
 const checkUsernameExists = `-- name: CheckUsernameExists :one
-SELECT EXISTS (
-    SELECT
-        1
-    FROM
-        users
-    WHERE
-        username = $1
-)
+SELECT
+    EXISTS (
+        SELECT
+            1
+        FROM
+            users
+        WHERE
+            username = $1
+    )
 `
 
 func (q *Queries) CheckUsernameExists(ctx context.Context, username string) (bool, error) {
@@ -80,6 +81,38 @@ WHERE
 
 func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 	row := q.db.QueryRow(ctx, getUserById, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.Name,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Activated,
+		&i.Version,
+		&i.Username,
+	)
+	return i, err
+}
+
+const getUserByUsername = `-- name: GetUserByUsername :one
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version,
+    username
+FROM
+    users
+WHERE
+    username = $1
+`
+
+func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByUsername, username)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -184,46 +217,17 @@ func (q *Queries) GetUserForToken(ctx context.Context, arg GetUserForTokenParams
 	return i, err
 }
 
-const getUsersWithoutUsername = `-- name: GetUsersWithoutUsername :many
-SELECT
-    id,
-    email
-FROM
-    users
-WHERE
-    username = 'default_username'
-`
-
-type GetUsersWithoutUsernameRow struct {
-	ID    uuid.UUID `json:"id"`
-	Email string    `json:"email"`
-}
-
-func (q *Queries) GetUsersWithoutUsername(ctx context.Context) ([]GetUsersWithoutUsernameRow, error) {
-	rows, err := q.db.Query(ctx, getUsersWithoutUsername)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetUsersWithoutUsernameRow
-	for rows.Next() {
-		var i GetUsersWithoutUsernameRow
-		if err := rows.Scan(&i.ID, &i.Email); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const insertUser = `-- name: InsertUser :one
 INSERT INTO
-    users (name, email, password_hash, activated)
+    users (name, email, username, password_hash, activated)
 VALUES
-    ($1, $2, $3, $4) RETURNING id,
+    (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5
+    ) RETURNING id,
     created_at,
     version
 `
@@ -231,6 +235,7 @@ VALUES
 type InsertUserParams struct {
 	Name         string `json:"name"`
 	Email        string `json:"email"`
+	Username     string `json:"username"`
 	PasswordHash []byte `json:"password_hash"`
 	Activated    bool   `json:"activated"`
 }
@@ -245,6 +250,7 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (InsertU
 	row := q.db.QueryRow(ctx, insertUser,
 		arg.Name,
 		arg.Email,
+		arg.Username,
 		arg.PasswordHash,
 		arg.Activated,
 	)
@@ -259,17 +265,19 @@ UPDATE
 SET
     name = $1,
     email = $2,
-    password_hash = $3,
-    activated = $4,
+    username = $3,
+    password_hash = $4,
+    activated = $5,
     version = version + 1
 WHERE
-    id = $5
-    AND version = $6 RETURNING version
+    id = $6
+    AND version = $7 RETURNING version
 `
 
 type UpdateUserParams struct {
 	Name         string    `json:"name"`
 	Email        string    `json:"email"`
+	Username     string    `json:"username"`
 	PasswordHash []byte    `json:"password_hash"`
 	Activated    bool      `json:"activated"`
 	ID           uuid.UUID `json:"id"`
@@ -280,6 +288,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (int32, 
 	row := q.db.QueryRow(ctx, updateUser,
 		arg.Name,
 		arg.Email,
+		arg.Username,
 		arg.PasswordHash,
 		arg.Activated,
 		arg.ID,
@@ -288,23 +297,4 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (int32, 
 	var version int32
 	err := row.Scan(&version)
 	return version, err
-}
-
-const updateUsername = `-- name: UpdateUsername :exec
-UPDATE
-    users
-SET
-    username = $1
-WHERE
-    id = $2
-`
-
-type UpdateUsernameParams struct {
-	Username string    `json:"username"`
-	ID       uuid.UUID `json:"id"`
-}
-
-func (q *Queries) UpdateUsername(ctx context.Context, arg UpdateUsernameParams) error {
-	_, err := q.db.Exec(ctx, updateUsername, arg.Username, arg.ID)
-	return err
 }
