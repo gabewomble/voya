@@ -142,14 +142,10 @@ func (s *Server) getCurrentUserHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": sanitizeUser(ctxUser)})
 }
 
-func (s *Server) getUserByIdHandler(c *gin.Context) {
-	userId, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		s.badRequest(c, errorDetailsFromMessage("invalid id"))
-		return
-	}
+func (s *Server) getUserByUsernameHandler(c *gin.Context) {
+	username := c.Param("username")
 
-	user, err := s.db.Queries().GetUserById(c, userId)
+	user, err := s.db.Queries().GetUserByUsername(c, username)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			s.notFoundResponse(c, errorDetailsFromMessage("user not found"))

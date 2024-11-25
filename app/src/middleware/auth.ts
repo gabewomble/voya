@@ -1,5 +1,6 @@
 import type { RequestHandler } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
+import { userSchema } from "~/types/user";
 
 export const authenticate: RequestHandler = async (requestEvent) => {
   const token = requestEvent.cookie.get("token")?.value;
@@ -9,7 +10,7 @@ export const authenticate: RequestHandler = async (requestEvent) => {
 
     if (res.ok) {
       const data = await res.json();
-      const user = data?.user ?? null;
+      const user = userSchema.parse(data?.user);
 
       requestEvent.sharedMap.set("user", user);
       return;
