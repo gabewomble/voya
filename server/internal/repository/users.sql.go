@@ -135,7 +135,8 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
     INNER JOIN tokens ON users.id = tokens.user_id
@@ -151,19 +152,9 @@ type GetUserForRefreshTokenParams struct {
 	TokenExpiry  time.Time `json:"token_expiry"`
 }
 
-type GetUserForRefreshTokenRow struct {
-	ID           uuid.UUID `json:"id"`
-	CreatedAt    time.Time `json:"created_at"`
-	Name         string    `json:"name"`
-	Email        string    `json:"email"`
-	PasswordHash []byte    `json:"password_hash"`
-	Activated    bool      `json:"activated"`
-	Version      int32     `json:"version"`
-}
-
-func (q *Queries) GetUserForRefreshToken(ctx context.Context, arg GetUserForRefreshTokenParams) (GetUserForRefreshTokenRow, error) {
+func (q *Queries) GetUserForRefreshToken(ctx context.Context, arg GetUserForRefreshTokenParams) (User, error) {
 	row := q.db.QueryRow(ctx, getUserForRefreshToken, arg.RefreshToken, arg.TokenScope, arg.TokenExpiry)
-	var i GetUserForRefreshTokenRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
@@ -172,6 +163,7 @@ func (q *Queries) GetUserForRefreshToken(ctx context.Context, arg GetUserForRefr
 		&i.PasswordHash,
 		&i.Activated,
 		&i.Version,
+		&i.Username,
 	)
 	return i, err
 }

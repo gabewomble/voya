@@ -15,7 +15,8 @@ import { mapServerErrors } from "~/helpers/map-server-errors";
 
 export const onGet = requireNoAuth;
 
-const invalidCredentialError = "invalid authentication credentials";
+const INVALID_CREDENTIAL_ERROR = "invalid authentication credentials";
+const NOT_ACTIVATED = "user not activated";
 
 const loginFormSchema = z.object({
   identifier: z.string().min(1, "Username or email is required"),
@@ -40,10 +41,30 @@ export const useLoginAction = formAction$<LoginForm>(async (data, request) => {
   if (!res.ok) {
     const { errors } = ((await res.json()) ?? { errors: [] }) as ErrorResponse;
 
+    if (errors.some((error) => error.message === NOT_ACTIVATED)) {
+      const resendRes = await serverFetch(
+        "/users/resend-activation",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            identifier: data.identifier,
+          }),
+        },
+        request,
+      );
+
+      if (resendRes.ok) {
+        throw request.redirect(303, "/activate?i=" + data.identifier);
+      }
+    }
+
     const { messages, fields } = mapServerErrors({
       errors,
       messages: {
-        [invalidCredentialError]: "Invalid credentials",
+        [INVALID_CREDENTIAL_ERROR]: "Invalid credentials",
       },
       fields: {
         identifier: {},

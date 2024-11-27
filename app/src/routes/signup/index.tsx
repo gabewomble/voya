@@ -91,7 +91,7 @@ export const useSignupAction = formAction$<SignupForm>(
       };
     }
 
-    throw request.redirect(303, "/activate");
+    throw request.redirect(303, "/activate?i=" + username);
   },
   zodForm$(signupFormSchema),
 );

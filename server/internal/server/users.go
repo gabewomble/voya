@@ -68,36 +68,11 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 		return
 	}
 
-	// Create activation token
-	token, err := data.Token.New(data.Token{}, user.ID, 3*24*time.Hour, data.TokenScope.Activation)
+	err = s.generateAndSendActivationToken(c, user.ID, userInput.Email)
 	if err != nil {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
-	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams{
-		TokenHash:    token.Model.Hash,
-		UserID:       token.Model.UserID,
-		TokenExpiry:  token.Model.Expiry,
-		TokenScope:   token.Model.Scope,
-		RefreshToken: token.Model.RefreshToken,
-	})
-	if err != nil {
-		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
-		return
-	}
-
-	// Send activation email
-	s.background(func() {
-		activationURL := fmt.Sprintf("%s/activate/%s", appUrl, token.Plaintext)
-		data := map[string]any{
-			"activationURL": activationURL,
-		}
-
-		err = s.mailer.Send(userInput.Email, "user_welcome.tmpl", data)
-		if err != nil {
-			s.log.LogError(c, "Failed to send activation email", err, "email", userInput.Email)
-		}
-	})
 
 	c.JSON(http.StatusCreated, gin.H{"user": user})
 }
@@ -160,12 +135,14 @@ func (s *Server) activateUserHandler(c *gin.Context) {
 		s.badRequest(c, errorDetailsFromError(err))
 		return
 	}
+
 	// Validate activation token
 	v := validator.New()
-	if data.ValidateTokenPlaintext(v, input.Token); !v.Valid() {
+	if data.ValidateTokenPlaintext(v, input.Token, "token"); !v.Valid() {
 		s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
 		return
 	}
+
 	// Find user from activation token
 	tokenHash := data.GetTokenHash(input.Token)
 	user, err := s.db.Queries().GetUserForToken(c, repository.GetUserForTokenParams{
@@ -182,6 +159,7 @@ func (s *Server) activateUserHandler(c *gin.Context) {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
+
 	// Update user activation status
 	user.Activated = true
 	_, err = s.db.Queries().UpdateUser(c, repository.UpdateUserParams{
@@ -197,6 +175,7 @@ func (s *Server) activateUserHandler(c *gin.Context) {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
+
 	// Delete activation tokens
 	err = s.db.Queries().DeleteAllTokensForUser(c, repository.DeleteAllTokensForUserParams{
 		TokenScope: data.TokenScope.Activation,
@@ -206,12 +185,14 @@ func (s *Server) activateUserHandler(c *gin.Context) {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
+
 	// Create authentication token
 	token, err := data.Token.New(data.Token{}, user.ID, 24*time.Hour, data.TokenScope.Authentication)
 	if err != nil {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
+
 	// Insert authentication token
 	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams{
 		TokenHash:    token.Model.Hash,
@@ -224,6 +205,7 @@ func (s *Server) activateUserHandler(c *gin.Context) {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"token": token.Plaintext})
 }
 
@@ -289,4 +271,93 @@ func (s *Server) updateUserProfileHandler(c *gin.Context) {
 		Version:   userVersion,
 		Username:  input.Username,
 	})})
+}
+
+func (s *Server) resendActivationHandler(c *gin.Context) {
+	var input struct {
+		Identifier string `json:"identifier"`
+	}
+
+	if err := c.BindJSON(&input); err != nil {
+		s.badRequest(c, errorDetailsFromError(err))
+		return
+	}
+
+	v := validator.New()
+
+	data.ValidateIdentifier(v, input.Identifier)
+
+	if !v.Valid() {
+		s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
+		return
+	}
+
+	var user repository.User
+	var err error
+
+	isEmail := validator.Matches(input.Identifier, validator.EmailRX)
+
+	if isEmail {
+		user, err = s.db.Queries().GetUserByEmail(c, input.Identifier)
+	} else {
+		user, err = s.db.Queries().GetUserByUsername(c, input.Identifier)
+	}
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.invalidCredentialsResponse(c)
+			return
+		}
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	err = s.generateAndSendActivationToken(c, user.ID, user.Email)
+	if err != nil {
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "activation email sent"})
+}
+
+func (s *Server) generateAndSendActivationToken(c *gin.Context, userID uuid.UUID, email string) error {
+	// Delete existing activation tokens
+	err := s.db.Queries().DeleteAllTokensForUser(c, repository.DeleteAllTokensForUserParams{
+		TokenScope: data.TokenScope.Activation,
+		UserID:     userID,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Create new activation token
+	token, err := data.Token.New(data.Token{}, userID, 3*24*time.Hour, data.TokenScope.Activation)
+	if err != nil {
+		return err
+	}
+	err = s.db.Queries().InsertToken(c, repository.InsertTokenParams{
+		TokenHash:    token.Model.Hash,
+		UserID:       token.Model.UserID,
+		TokenExpiry:  token.Model.Expiry,
+		TokenScope:   token.Model.Scope,
+		RefreshToken: token.Model.RefreshToken,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Send activation email
+	s.background(func() {
+		activationURL := fmt.Sprintf("%s/activate/?t=%s&i=%s", appUrl, token.Plaintext, email)
+		data := map[string]any{
+			"activationURL": activationURL,
+		}
+
+		err = s.mailer.Send(email, "user_welcome.tmpl", data)
+		if err != nil {
+			s.log.LogError(c, "Failed to send activation email", err, "email", email)
+		}
+	})
+
+	return nil
 }

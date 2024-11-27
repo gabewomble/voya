@@ -19,6 +19,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.POST("/users", s.registerUserHandler)
 	r.GET("/users/current", s.getCurrentUserHandler)
 	r.PUT("/users/activated", s.activateUserHandler)
+	r.POST("/users/resend-activation", s.resendActivationHandler)
 	r.POST("/tokens/authenticate", s.createAuthTokenHandler)
 	r.POST("/tokens/refresh", s.refreshAuthTokenHandler)
 
@@ -28,14 +29,14 @@ func (s *Server) RegisterRoutes() http.Handler {
 		// Tokens
 		protected.DELETE("/tokens/current", s.deleteAuthTokenHandler)
 		// Users
-		protected.GET("/users/:username", s.getUserByUsernameHandler)
-		protected.PATCH("/users/:username", s.updateUserProfileHandler)
+		protected.GET("/users/u/:username", s.getUserByUsernameHandler)
+		protected.PATCH("/users/u/:username", s.updateUserProfileHandler)
 
 		// Trips
 		protected.GET("/trips", s.listTripsHandler)
 		protected.POST("/trips", s.createTripHandler)
-		protected.GET("/trips/:id", s.getTripByIdHandler)
-		protected.DELETE("/trips/:id", s.deleteTripByIdHandler)
+		protected.GET("/trips/t/:id", s.getTripByIdHandler)
+		protected.DELETE("/trips/t/:id", s.deleteTripByIdHandler)
 	}
 
 	return r
