@@ -1,8 +1,30 @@
 import { component$ } from "@builder.io/qwik";
-import { Form, routeAction$, zod$, z } from "@builder.io/qwik-city";
+import { routeLoader$, z } from "@builder.io/qwik-city";
+import {
+  useForm,
+  zodForm$,
+  formAction$,
+  type InitialValues,
+} from "@modular-forms/qwik";
 import { serverFetch } from "~/helpers/server-fetch";
+import { TextInput } from "~/components";
+import { errorResponseSchema } from "~/types/server-errors";
+import { mapServerErrors } from "~/helpers/map-server-errors";
 
-export const useCreateTripAction = routeAction$(
+const newTripFormSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .max(30, "Name must be less than 30 characters"),
+  description: z
+    .string()
+    .min(1, "Description is required")
+    .max(500, "Description must be less than 500 characters"),
+});
+
+type NewTripForm = z.infer<typeof newTripFormSchema>;
+
+export const useCreateTripAction = formAction$<NewTripForm>(
   async (formData, request) => {
     const { name, description } = formData;
 
@@ -21,53 +43,85 @@ export const useCreateTripAction = routeAction$(
     const json = await res.json();
 
     if (!res.ok) {
-      request.fail(res.status, json);
-      return;
+      const { errors } = errorResponseSchema.parse(await res.json());
+      const { messages, fields } = mapServerErrors({
+        errors,
+        messages: {},
+        fields: {
+          name: {},
+          description: {},
+        },
+      });
+
+      return {
+        message: messages[0],
+        errors: {
+          name: fields.name[0],
+          description: fields.description[0],
+        },
+      };
     }
 
     const trip = json.trip;
-
     throw request.redirect(303, `/trips/${trip.id}`);
   },
-  zod$({
-    name: z.string().min(1, "Name is required").max(255),
-    description: z.string().min(1, "Description is required").max(500),
+  zodForm$(newTripFormSchema),
+);
+
+export const useNewTripFormLoader = routeLoader$<InitialValues<NewTripForm>>(
+  () => ({
+    name: "",
+    description: "",
   }),
 );
 
 export default component$(() => {
-  const createTrip = useCreateTripAction();
+  const [newTripForm, { Form, Field }] = useForm<NewTripForm>({
+    loader: useNewTripFormLoader(),
+    action: useCreateTripAction(),
+    validate: zodForm$(newTripFormSchema),
+    validateOn: "blur",
+    revalidateOn: "blur",
+  });
 
   return (
     <div class="container mx-auto py-8">
       <div class="card bg-base-200 shadow-lg">
         <div class="card-body">
           <h1 class="card-title mb-4 text-4xl font-bold">New Trip</h1>
-          <Form action={createTrip} class="flex flex-col gap-4 space-y-4">
-            <div class="form-control">
-              <label for="name" class="label">
-                <span class="label-text">Trip Name:</span>
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                class="input input-bordered w-full"
-                placeholder="Enter the trip name"
-                required
-              />
-            </div>
-            <div class="form-control">
-              <label for="description" class="label">
-                <span class="label-text">Trip Description:</span>
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                class="textarea textarea-bordered w-full"
-                placeholder="Enter the trip description"
-              ></textarea>
-            </div>
+          {newTripForm.response.message && (
+            <p class="my-2 text-error">{newTripForm.response.message}</p>
+          )}
+          <Form class="flex flex-col gap-4 space-y-4">
+            <Field name="name">
+              {(field, props) => (
+                <div class="form-control">
+                  <TextInput
+                    id="name"
+                    name="name"
+                    label="Trip Name"
+                    placeholder="Enter the trip name"
+                    field={field}
+                    fieldProps={props}
+                  />
+                </div>
+              )}
+            </Field>
+            <Field name="description">
+              {(field, props) => (
+                <div class="form-control">
+                  <TextInput
+                    id="description"
+                    name="description"
+                    label="Description"
+                    placeholder="Enter the trip description"
+                    field={field}
+                    fieldProps={props}
+                    type="textarea"
+                  />
+                </div>
+              )}
+            </Field>
             <div class="form-control mt-6">
               <button type="submit" class="btn btn-primary w-full">
                 Create Trip

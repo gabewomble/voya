@@ -83,7 +83,8 @@ SELECT
     email,
     password_hash,
     activated,
-    version
+    version,
+    username
 FROM
     users
     INNER JOIN tokens ON users.id = tokens.user_id

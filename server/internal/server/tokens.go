@@ -26,6 +26,8 @@ func (s *Server) createAuthTokenHandler(c *gin.Context) {
 
 	v := validator.New()
 
+	// Validate Identifier
+	data.ValidateIdentifier(v, input.Identifier)
 	// Validate Password
 	data.ValidateUserPasswordPlaintext(v, input.Password)
 
@@ -40,18 +42,8 @@ func (s *Server) createAuthTokenHandler(c *gin.Context) {
 	var err error
 
 	if isEmail {
-		data.ValidateUserEmail(v, input.Identifier)
-		if !v.Valid() {
-			s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
-			return
-		}
 		user, err = s.db.Queries().GetUserByEmail(c, input.Identifier)
 	} else {
-		data.ValidateUsername(v, input.Identifier)
-		if !v.Valid() {
-			s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
-			return
-		}
 		user, err = s.db.Queries().GetUserByUsername(c, input.Identifier)
 	}
 
@@ -65,7 +57,7 @@ func (s *Server) createAuthTokenHandler(c *gin.Context) {
 	}
 
 	if !user.Activated {
-		s.statusForbidden(c)
+		s.errorResponse(c, http.StatusForbidden, errorDetailsFromMessage("user not activated"))
 		return
 	}
 
@@ -93,7 +85,7 @@ func (s *Server) refreshAuthTokenHandler(c *gin.Context) {
 	}
 
 	v := validator.New()
-	data.ValidateTokenPlaintext(v, input.RefreshToken)
+	data.ValidateTokenPlaintext(v, input.RefreshToken, "refresh_token")
 	if !v.Valid() {
 		s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
 		return

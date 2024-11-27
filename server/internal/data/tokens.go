@@ -91,7 +91,7 @@ func GetTokenPlainTextFromContext(c *gin.Context) (string, error) {
 
 	v := validator.New()
 
-	if ValidateTokenPlaintext(v, token); !v.Valid() {
+	if ValidateTokenPlaintext(v, token, "token"); !v.Valid() {
 		return "", TokenErr.InvalidToken
 	}
 
@@ -102,7 +102,7 @@ func GetTokenHash(plaintext string) [32]byte {
 	return sha256.Sum256([]byte(plaintext))
 }
 
-func ValidateTokenPlaintext(v *validator.Validator, pt string) {
-	v.CheckStrNotEmpty(pt, "token")
-	v.Check(len(pt) == 26, "token", "must be 26 bytes long")
+func ValidateTokenPlaintext(v *validator.Validator, pt string, fieldName string) {
+	v.CheckStrNotEmpty(pt, fieldName)
+	v.Check(len(pt) == 26, fieldName, "must be 26 bytes long")
 }

@@ -95,6 +95,15 @@ func ExtractUserValidationErrors(v *validator.Validator, err error) {
 	}
 }
 
+func ValidateIdentifier(v *validator.Validator, identifier string) {
+	v.CheckStrNotEmpty(identifier, "identifier")
+	isEmail := validator.Matches(identifier, validator.EmailRX)
+
+	if !isEmail && v.Valid() {
+		v.Check(len(identifier) <= 30, "identifier", "must not be more than 30 characters long")
+	}
+}
+
 func (u UserInput) Validate(v *validator.Validator) {
 	ValidateUsername(v, u.Username)
 	ValidateName(v, u.Name)
