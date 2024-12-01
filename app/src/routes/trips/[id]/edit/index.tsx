@@ -1,3 +1,4 @@
+import { Link } from "@builder.io/qwik-city";
 import { useTripData } from "../layout";
 import { component$ } from "@builder.io/qwik";
 
@@ -35,9 +36,9 @@ export default component$(() => {
               <button class="btn btn-primary" type="submit">
                 Save changes
               </button>
-              <a href={`/trips/${trip.id}`} class="btn btn-secondary">
+              <Link href={`/trips/${trip.id}`} class="btn btn-secondary">
                 Cancel
-              </a>
+              </Link>
             </div>
           </form>
         </div>

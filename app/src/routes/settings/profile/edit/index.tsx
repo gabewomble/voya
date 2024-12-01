@@ -1,5 +1,5 @@
 import { component$ } from "@builder.io/qwik";
-import { routeLoader$, z } from "@builder.io/qwik-city";
+import { Link, routeLoader$, z } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
 import {
   zodForm$,
@@ -125,9 +125,9 @@ export default component$(() => {
               </Field>
             </div>
             <div class="flex justify-end gap-4">
-              <a href="/settings/profile" class="btn btn-secondary">
+              <Link href="/settings/profile" class="btn btn-secondary">
                 Cancel
-              </a>
+              </Link>
               <button type="submit" class="btn btn-primary">
                 Save Changes
               </button>

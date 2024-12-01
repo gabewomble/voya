@@ -1,5 +1,5 @@
 import { component$ } from "@builder.io/qwik";
-import { routeLoader$, z } from "@builder.io/qwik-city";
+import { Link, routeLoader$, z } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
 import { setCookie } from "~/helpers/set-cookie";
 import { requireNoAuth } from "~/middleware/auth";
@@ -146,9 +146,9 @@ export default component$(() => {
         <div class="mt-4 text-center">
           <p class="text-sm">
             Don't have an account?{" "}
-            <a href="/signup" class="text-primary">
+            <Link href="/signup" class="text-primary">
               Sign up
-            </a>
+            </Link>
           </p>
         </div>
       </Form>
