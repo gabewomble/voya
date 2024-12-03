@@ -1,7 +1,7 @@
 import { component$, Slot } from "@builder.io/qwik";
 
 export const Card = component$(() => (
-  <div class="card mb-8 bg-base-200 shadow-lg">
+  <div class="card bg-base-200 shadow-lg">
     <div class="card-body">
       <Slot />
     </div>
