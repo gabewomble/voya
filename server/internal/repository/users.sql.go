@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const checkUsernameExists = `-- name: CheckUsernameExists :one
@@ -249,6 +250,64 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (InsertU
 	var i InsertUserRow
 	err := row.Scan(&i.ID, &i.CreatedAt, &i.Version)
 	return i, err
+}
+
+const searchUsers = `-- name: SearchUsers :many
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version,
+    username
+FROM
+    users
+WHERE
+    (
+        name ILIKE '%' || $1 || '%'
+        OR email ILIKE '%' || $1 || '%'
+        OR username ILIKE '%' || $1 || '%'
+    )
+    AND (id != $2)
+LIMIT
+    $3
+`
+
+type SearchUsersParams struct {
+	Identifier pgtype.Text `json:"identifier"`
+	UserID     uuid.UUID   `json:"user_id"`
+	UserLimit  int32       `json:"user_limit"`
+}
+
+func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, searchUsers, arg.Identifier, arg.UserID, arg.UserLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.Name,
+			&i.Email,
+			&i.PasswordHash,
+			&i.Activated,
+			&i.Version,
+			&i.Username,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateUser = `-- name: UpdateUser :one

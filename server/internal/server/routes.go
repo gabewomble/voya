@@ -31,6 +31,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 		// Users
 		protected.GET("/users/u/:username", s.getUserByUsernameHandler)
 		protected.PATCH("/users/u/:username", s.updateUserProfileHandler)
+		protected.POST("/users/search", s.searchUsersHandler)
 
 		// Trips
 		protected.GET("/trips", s.listTripsHandler)

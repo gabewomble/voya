@@ -17,8 +17,8 @@ export const onGet = requireNoAuth;
 const signupFormSchema = z
   .object({
     username: z
-      .string()
-      .min(1, "Username is required")
+      .string({ required_error: "Username is required" })
+      .min(4, "Username must be at least 4 characters")
       .max(30, "Username cannot be longer than 30 characters"),
     email: z.string().email("Invalid email address"),
     password: z

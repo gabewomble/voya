@@ -13,9 +13,55 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 var appUrl = os.Getenv("APP_URL")
+
+func (s *Server) searchUsersHandler(c *gin.Context) {
+	var input struct {
+		Identifier string `json:"identifier"`
+		Limit      int    `json:"limit"`
+	}
+	if err := c.BindJSON(&input); err != nil {
+		s.badRequest(c, errorDetailsFromError(err))
+		return
+	}
+
+	v := validator.New()
+	v.Check(input.Limit > 0, "limit", "must be greater than 0")
+	v.Check(input.Limit <= 100, "limit", "must be less than or equal to 100")
+	v.Check(len(input.Identifier) > 0, "identifier", "must not be empty")
+	v.Check(len(input.Identifier) >= 4, "identifier", "must be at least 4 characters")
+	v.Check(len(input.Identifier) <= 100, "identifier", "must be 100 or less characters")
+
+	if !v.Valid() {
+		s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
+		return
+	}
+
+	identifier := pgtype.Text{}
+	identifier.Scan(input.Identifier)
+
+	currentUser := s.ctxGetUser(c)
+
+	users, err := s.db.Queries().SearchUsers(c, repository.SearchUsersParams{
+		Identifier: identifier,
+		UserLimit:  int32(input.Limit),
+		UserID:     currentUser.ID,
+	})
+	if err != nil {
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	cleanUsers := make([]cleanUser, len(users))
+	for i, u := range users {
+		cleanUsers[i] = sanitizeUser(&u)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"users": cleanUsers})
+}
 
 func (s *Server) registerUserHandler(c *gin.Context) {
 	var input struct {
