@@ -7,9 +7,9 @@ package repository
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const deleteAllTokensForUser = `-- name: DeleteAllTokensForUser :exec
@@ -69,11 +69,11 @@ VALUES
 `
 
 type InsertTokenParams struct {
-	TokenHash    []byte    `json:"token_hash"`
-	UserID       uuid.UUID `json:"user_id"`
-	TokenExpiry  time.Time `json:"token_expiry"`
-	TokenScope   string    `json:"token_scope"`
-	RefreshToken []byte    `json:"refresh_token"`
+	TokenHash    []byte             `json:"token_hash"`
+	UserID       uuid.UUID          `json:"user_id"`
+	TokenExpiry  pgtype.Timestamptz `json:"token_expiry"`
+	TokenScope   string             `json:"token_scope"`
+	RefreshToken []byte             `json:"refresh_token"`
 }
 
 func (q *Queries) InsertToken(ctx context.Context, arg InsertTokenParams) error {

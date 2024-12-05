@@ -38,6 +38,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 		protected.POST("/trips", s.createTripHandler)
 		protected.GET("/trips/t/:id", s.getTripByIdHandler)
 		protected.DELETE("/trips/t/:id", s.deleteTripByIdHandler)
+		protected.POST("/trips/t/:id/members", s.addMemberToTripHandler)
+		protected.PATCH("/trips/t/:id/members", s.updateTripMemberStatusHandler)
 	}
 
 	return r

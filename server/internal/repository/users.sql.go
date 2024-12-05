@@ -7,7 +7,6 @@ package repository
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -148,9 +147,9 @@ WHERE
 `
 
 type GetUserForRefreshTokenParams struct {
-	RefreshToken []byte    `json:"refresh_token"`
-	TokenScope   string    `json:"token_scope"`
-	TokenExpiry  time.Time `json:"token_expiry"`
+	RefreshToken []byte             `json:"refresh_token"`
+	TokenScope   string             `json:"token_scope"`
+	TokenExpiry  pgtype.Timestamptz `json:"token_expiry"`
 }
 
 func (q *Queries) GetUserForRefreshToken(ctx context.Context, arg GetUserForRefreshTokenParams) (User, error) {
@@ -189,9 +188,9 @@ WHERE
 `
 
 type GetUserForTokenParams struct {
-	TokenHash   []byte    `json:"token_hash"`
-	TokenScope  string    `json:"token_scope"`
-	TokenExpiry time.Time `json:"token_expiry"`
+	TokenHash   []byte             `json:"token_hash"`
+	TokenScope  string             `json:"token_scope"`
+	TokenExpiry pgtype.Timestamptz `json:"token_expiry"`
 }
 
 func (q *Queries) GetUserForToken(ctx context.Context, arg GetUserForTokenParams) (User, error) {
@@ -234,9 +233,9 @@ type InsertUserParams struct {
 }
 
 type InsertUserRow struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	Version   int32     `json:"version"`
+	ID        uuid.UUID          `json:"id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Version   int32              `json:"version"`
 }
 
 func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (InsertUserRow, error) {
