@@ -65,6 +65,7 @@ func (s *Server) addMemberToTripHandler(c *gin.Context) {
 	})
 
 	if err != nil {
+		s.log.LogError(c, "addMemberToTripHandler: AddUserToTrip failed", err)
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}

@@ -29,6 +29,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 		// Tokens
 		protected.DELETE("/tokens/current", s.deleteAuthTokenHandler)
 		// Users
+		// Hate that I can't have both /users/search and /users/:username
+		// -1 for Gin
 		protected.GET("/users/u/:username", s.getUserByUsernameHandler)
 		protected.PATCH("/users/u/:username", s.updateUserProfileHandler)
 		protected.POST("/users/search", s.searchUsersHandler)
@@ -38,8 +40,13 @@ func (s *Server) RegisterRoutes() http.Handler {
 		protected.POST("/trips", s.createTripHandler)
 		protected.GET("/trips/t/:id", s.getTripByIdHandler)
 		protected.DELETE("/trips/t/:id", s.deleteTripByIdHandler)
-		protected.POST("/trips/t/:id/members", s.addMemberToTripHandler)
-		protected.PATCH("/trips/t/:id/members", s.updateTripMemberStatusHandler)
+
+		// Gin doesn't correctly parse parameters, so it considers /memberes as part of the :id
+		// -1 for Gin
+		// Trip Members
+		protected.POST("/trips/m/:id", s.addMemberToTripHandler)
+		protected.PATCH("/trips/m/:id", s.updateTripMemberStatusHandler)
+
 	}
 
 	return r

@@ -12,22 +12,22 @@ import (
 )
 
 type Token struct {
-	Hash         []byte             `json:"hash"`
-	UserID       uuid.UUID          `json:"user_id"`
-	Expiry       pgtype.Timestamptz `json:"expiry"`
-	Scope        string             `json:"scope"`
-	RefreshToken []byte             `json:"refresh_token"`
+	Hash         []byte    `json:"hash"`
+	UserID       uuid.UUID `json:"user_id"`
+	Expiry       time.Time `json:"expiry"`
+	Scope        string    `json:"scope"`
+	RefreshToken []byte    `json:"refresh_token"`
 }
 
 type Trip struct {
-	ID          uuid.UUID          `json:"id"`
-	Name        string             `json:"name"`
-	Description pgtype.Text        `json:"description"`
-	StartDate   pgtype.Date        `json:"start_date"`
-	EndDate     pgtype.Date        `json:"end_date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	OwnerID     uuid.UUID          `json:"owner_id"`
+	ID          uuid.UUID   `json:"id"`
+	Name        string      `json:"name"`
+	Description pgtype.Text `json:"description"`
+	StartDate   pgtype.Date `json:"start_date"`
+	EndDate     pgtype.Date `json:"end_date"`
+	CreatedAt   time.Time   `json:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at"`
+	OwnerID     uuid.UUID   `json:"owner_id"`
 }
 
 type TripMember struct {
@@ -40,12 +40,12 @@ type TripMember struct {
 }
 
 type User struct {
-	ID           uuid.UUID          `json:"id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	Name         string             `json:"name"`
-	Email        string             `json:"email"`
-	PasswordHash []byte             `json:"password_hash"`
-	Activated    bool               `json:"activated"`
-	Version      int32              `json:"version"`
-	Username     string             `json:"username"`
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	Name         string    `json:"name"`
+	Email        string    `json:"email"`
+	PasswordHash []byte    `json:"password_hash"`
+	Activated    bool      `json:"activated"`
+	Version      int32     `json:"version"`
+	Username     string    `json:"username"`
 }
