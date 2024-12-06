@@ -1,5 +1,5 @@
 import { component$ } from "@builder.io/qwik";
-import type { DocumentHead } from "@builder.io/qwik-city";
+import { Link, type DocumentHead } from "@builder.io/qwik-city";
 
 export default component$(() => {
   return (
@@ -12,9 +12,9 @@ export default component$(() => {
               Collaborate with friends and family to plan and manage your group
               trips effortlessly.
             </p>
-            <a href="/signup" class="btn btn-primary">
+            <Link href="/signup" class="btn btn-primary">
               Get Started
-            </a>
+            </Link>
           </div>
         </div>
       </div>

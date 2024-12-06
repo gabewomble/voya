@@ -37,6 +37,7 @@ func New() *Logger {
 
 func (l *Logger) LogError(c *gin.Context, message string, err error, fields ...interface{}) {
 	baseFields := []interface{}{
+		"message", message,
 		"method", c.Request.Method,
 		"uri", c.Request.RequestURI,
 		"error", err.Error(),

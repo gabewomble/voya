@@ -2,6 +2,7 @@ import { component$ } from "@builder.io/qwik";
 import type { FieldElementProps, FieldStore } from "@modular-forms/qwik";
 
 type TextInputProps = {
+  autocomplete?: AutoFill;
   id: string;
   name: string;
   label: string;
@@ -13,7 +14,16 @@ type TextInputProps = {
 };
 
 export const TextInput = component$<TextInputProps>(
-  ({ id, label, name, placeholder, type = "text", fieldProps, field }) => (
+  ({
+    autocomplete,
+    id,
+    label,
+    name,
+    placeholder,
+    type = "text",
+    fieldProps,
+    field,
+  }) => (
     <>
       <label for={id} class="mb-2 block text-sm font-bold text-base-content">
         {label}
@@ -22,6 +32,7 @@ export const TextInput = component$<TextInputProps>(
       {type === "textarea" ? (
         <textarea
           {...fieldProps}
+          autocomplete={autocomplete}
           class={`input input-bordered w-full ${field.error ? "input-error" : ""}`}
           id={id}
           name={name}
@@ -31,6 +42,7 @@ export const TextInput = component$<TextInputProps>(
       ) : (
         <input
           {...fieldProps}
+          autocomplete={autocomplete}
           class={`input input-bordered w-full ${field.error ? "input-error" : ""}`}
           type={type}
           id={id}

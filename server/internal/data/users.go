@@ -65,6 +65,7 @@ func CompareUserHashAndPassword(hash []byte, pt string) (bool, error) {
 
 func ValidateUsername(v *validator.Validator, username string) {
 	v.CheckStrNotEmpty(username, "username")
+	v.Check(len(username) >= 4, "username", "must be at least 4 characters long")
 	v.Check(len(username) <= 30, "username", "must not be more than 30 characters long")
 }
 

@@ -4,6 +4,7 @@ import {
   Form,
   routeAction$,
   type RequestEventBase,
+  Link,
 } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
 
@@ -114,9 +115,9 @@ const ActivationSuccess = component$(() => (
     <h1 class="card-title mb-4 text-4xl font-bold">Account Activated</h1>
     <p class="text-lg">Your account has been successfully activated.</p>
     <div class="mt-6">
-      <a href="/trips" class="btn btn-primary">
+      <Link href="/trips" class="btn btn-primary">
         Go to Trips
-      </a>
+      </Link>
     </div>
   </>
 ));

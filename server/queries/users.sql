@@ -117,3 +117,25 @@ SELECT
         WHERE
             username = @username
     );
+
+-- name: SearchUsers :many
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version,
+    username
+FROM
+    users
+WHERE
+    (
+        name ILIKE '%' || @identifier || '%'
+        OR email ILIKE '%' || @identifier || '%'
+        OR username ILIKE '%' || @identifier || '%'
+    )
+    AND (id != @user_id)
+LIMIT
+    @user_limit;

@@ -1,5 +1,5 @@
 import { component$ } from "@builder.io/qwik";
-import { z, routeLoader$ } from "@builder.io/qwik-city";
+import { z, routeLoader$, Link } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
 import { requireNoAuth } from "~/middleware/auth";
 import {
@@ -17,8 +17,8 @@ export const onGet = requireNoAuth;
 const signupFormSchema = z
   .object({
     username: z
-      .string()
-      .min(1, "Username is required")
+      .string({ required_error: "Username is required" })
+      .min(4, "Username must be at least 4 characters")
       .max(30, "Username cannot be longer than 30 characters"),
     email: z.string().email("Invalid email address"),
     password: z
@@ -187,9 +187,9 @@ export default component$(() => {
         <div class="mt-4 text-center">
           <p class="text-sm">
             Already have an account?{" "}
-            <a href="/login" class="text-primary">
+            <Link href="/login" class="text-primary">
               Login
-            </a>
+            </Link>
           </p>
         </div>
       </Form>

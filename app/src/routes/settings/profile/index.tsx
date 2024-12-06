@@ -1,4 +1,5 @@
 import { component$, useContext } from "@builder.io/qwik";
+import { Link } from "@builder.io/qwik-city";
 import { UserContext } from "~/context/user";
 
 export default component$(() => {
@@ -37,9 +38,9 @@ export default component$(() => {
             </div>
           </div>
           <div class="mt-6 flex justify-end">
-            <a href="/settings/profile/edit" class="btn btn-primary">
+            <Link href="/settings/profile/edit" class="btn btn-primary">
               Edit Profile
-            </a>
+            </Link>
           </div>
         </div>
       </div>

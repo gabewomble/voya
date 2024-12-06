@@ -31,8 +31,12 @@ type Trip struct {
 }
 
 type TripMember struct {
-	TripID uuid.UUID `json:"trip_id"`
-	UserID uuid.UUID `json:"user_id"`
+	TripID       uuid.UUID `json:"trip_id"`
+	UserID       uuid.UUID `json:"user_id"`
+	InvitedBy    uuid.UUID `json:"invited_by"`
+	MemberStatus string    `json:"member_status"`
+	RemovedBy    uuid.UUID `json:"removed_by"`
+	RemovedAt    time.Time `json:"removed_at"`
 }
 
 type User struct {

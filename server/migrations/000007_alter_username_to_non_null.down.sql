@@ -11,4 +11,4 @@ SET
     DEFAULT 'default_username';
 
 ALTER TABLE
-    users DROP CONSTRAINT unique_username;
+    users DROP CONSTRAINT IF EXISTS username_unique;

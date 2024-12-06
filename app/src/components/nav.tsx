@@ -1,5 +1,5 @@
 import { component$, useContext } from "@builder.io/qwik";
-import { Form, globalAction$, zod$ } from "@builder.io/qwik-city";
+import { Form, Link, globalAction$, zod$ } from "@builder.io/qwik-city";
 import { UserContext } from "~/context/user";
 import { serverFetch } from "~/helpers/server-fetch";
 
@@ -31,15 +31,15 @@ export const Nav = component$(() => {
   return (
     <nav class="navbar bg-base-300 shadow-lg">
       <div class="container mx-auto flex items-center justify-between px-4">
-        <a class="text-2xl font-bold text-primary" href="/">
+        <Link class="text-2xl font-bold text-primary" href="/">
           Voya
-        </a>
+        </Link>
         <div class="flex items-center gap-4 space-x-4">
           {isLoggedIn ? (
             <>
-              <a class="btn btn-ghost" href="/trips">
+              <Link class="btn btn-ghost" href="/trips">
                 My Trips
-              </a>
+              </Link>
               <div class="dropdown dropdown-end">
                 <div
                   tabIndex={0}
@@ -60,7 +60,7 @@ export const Nav = component$(() => {
                   class="menu dropdown-content menu-sm z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow"
                 >
                   <li>
-                    <a href="/settings/profile">Profile</a>
+                    <Link href="/settings/profile">Profile</Link>
                   </li>
                   <Form action={logout} class="contents">
                     <li>
@@ -71,9 +71,9 @@ export const Nav = component$(() => {
               </div>
             </>
           ) : (
-            <a class="btn btn-primary" href="/login">
+            <Link class="btn btn-primary" href="/login">
               Login
-            </a>
+            </Link>
           )}
         </div>
       </div>
