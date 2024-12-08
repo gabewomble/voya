@@ -5,11 +5,59 @@
 package repository
 
 import (
+	"database/sql/driver"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type MemberStatusEnum string
+
+const (
+	MemberStatusEnumOwner     MemberStatusEnum = "owner"
+	MemberStatusEnumPending   MemberStatusEnum = "pending"
+	MemberStatusEnumAccepted  MemberStatusEnum = "accepted"
+	MemberStatusEnumDeclined  MemberStatusEnum = "declined"
+	MemberStatusEnumRemoved   MemberStatusEnum = "removed"
+	MemberStatusEnumCancelled MemberStatusEnum = "cancelled"
+)
+
+func (e *MemberStatusEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MemberStatusEnum(s)
+	case string:
+		*e = MemberStatusEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MemberStatusEnum: %T", src)
+	}
+	return nil
+}
+
+type NullMemberStatusEnum struct {
+	MemberStatusEnum MemberStatusEnum `json:"member_status_enum"`
+	Valid            bool             `json:"valid"` // Valid is true if MemberStatusEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMemberStatusEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.MemberStatusEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MemberStatusEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMemberStatusEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MemberStatusEnum), nil
+}
 
 type Token struct {
 	Hash         []byte    `json:"hash"`
@@ -31,12 +79,12 @@ type Trip struct {
 }
 
 type TripMember struct {
-	TripID       uuid.UUID `json:"trip_id"`
-	UserID       uuid.UUID `json:"user_id"`
-	InvitedBy    uuid.UUID `json:"invited_by"`
-	MemberStatus string    `json:"member_status"`
-	RemovedBy    uuid.UUID `json:"removed_by"`
-	RemovedAt    time.Time `json:"removed_at"`
+	TripID       uuid.UUID        `json:"trip_id"`
+	UserID       uuid.UUID        `json:"user_id"`
+	InvitedBy    uuid.UUID        `json:"invited_by"`
+	MemberStatus MemberStatusEnum `json:"member_status"`
+	RemovedBy    uuid.UUID        `json:"removed_by"`
+	RemovedAt    time.Time        `json:"removed_at"`
 }
 
 type User struct {

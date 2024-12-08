@@ -103,14 +103,27 @@ export const Members = component$(() => {
           </tbody>
         </table>
       )}
+      <div class="divider" />
       {members.length > 0 ? (
-        <ul class="list-disc pl-5">
-          {members.map((member) => (
-            <li key={member.id} class="py-2">
-              {member.name} ({member.email})
-            </li>
-          ))}
-        </ul>
+        <table class="table">
+          <caption>Trip Members</caption>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {members.map((user) => (
+              <tr key={user.id}>
+                <td>{user.name}</td>
+                <td>{user.email}</td>
+                <td>{user.member_status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       ) : (
         <div class="py-4">
           <p>No members yet.</p>

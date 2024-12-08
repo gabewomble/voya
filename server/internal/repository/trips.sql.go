@@ -12,23 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const addTripMember = `-- name: AddTripMember :exec
-INSERT INTO
-    trip_members (trip_id, user_id)
-VALUES
-    ($1, $2)
-`
-
-type AddTripMemberParams struct {
-	TripID uuid.UUID `json:"trip_id"`
-	UserID uuid.UUID `json:"user_id"`
-}
-
-func (q *Queries) AddTripMember(ctx context.Context, arg AddTripMemberParams) error {
-	_, err := q.db.Exec(ctx, addTripMember, arg.TripID, arg.UserID)
-	return err
-}
-
 const deleteTripById = `-- name: DeleteTripById :exec
 DELETE FROM
     trips
@@ -55,8 +38,7 @@ FROM
 WHERE
     id = $1
     AND (
-        owner_id = $2
-        OR id IN (
+        id IN (
             SELECT
                 trip_id
             FROM
@@ -86,44 +68,6 @@ func (q *Queries) GetTripById(ctx context.Context, arg GetTripByIdParams) (Trip,
 		&i.OwnerID,
 	)
 	return i, err
-}
-
-const getTripMembers = `-- name: GetTripMembers :many
-SELECT
-    u.id,
-    u.name,
-    u.email
-FROM
-    users u
-    INNER JOIN trip_members tm ON u.id = tm.user_id
-WHERE
-    tm.trip_id = $1
-`
-
-type GetTripMembersRow struct {
-	ID    uuid.UUID `json:"id"`
-	Name  string    `json:"name"`
-	Email string    `json:"email"`
-}
-
-func (q *Queries) GetTripMembers(ctx context.Context, tripID uuid.UUID) ([]GetTripMembersRow, error) {
-	rows, err := q.db.Query(ctx, getTripMembers, tripID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetTripMembersRow
-	for rows.Next() {
-		var i GetTripMembersRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.Email); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const insertTrip = `-- name: InsertTrip :one
@@ -161,8 +105,7 @@ SELECT
 FROM
     trips
 WHERE
-    owner_id = $1
-    OR id IN (
+    id IN (
         SELECT
             trip_id
         FROM
@@ -199,22 +142,4 @@ func (q *Queries) ListTrips(ctx context.Context, userID uuid.UUID) ([]Trip, erro
 		return nil, err
 	}
 	return items, nil
-}
-
-const removeTripMember = `-- name: RemoveTripMember :exec
-DELETE FROM
-    trip_members
-WHERE
-    trip_id = $1
-    AND user_id = $2
-`
-
-type RemoveTripMemberParams struct {
-	TripID uuid.UUID `json:"trip_id"`
-	UserID uuid.UUID `json:"user_id"`
-}
-
-func (q *Queries) RemoveTripMember(ctx context.Context, arg RemoveTripMemberParams) error {
-	_, err := q.db.Exec(ctx, removeTripMember, arg.TripID, arg.UserID)
-	return err
 }

@@ -12,8 +12,7 @@ FROM
 WHERE
     id = @id
     AND (
-        owner_id = @user_id
-        OR id IN (
+        id IN (
             SELECT
                 trip_id
             FROM
@@ -36,8 +35,7 @@ SELECT
 FROM
     trips
 WHERE
-    owner_id = @user_id
-    OR id IN (
+    id IN (
         SELECT
             trip_id
         FROM
@@ -45,27 +43,3 @@ WHERE
         WHERE
             user_id = @user_id
     );
-
--- name: AddTripMember :exec
-INSERT INTO
-    trip_members (trip_id, user_id)
-VALUES
-    (@trip_id, @user_id);
-
--- name: RemoveTripMember :exec
-DELETE FROM
-    trip_members
-WHERE
-    trip_id = @trip_id
-    AND user_id = @user_id;
-
--- name: GetTripMembers :many
-SELECT
-    u.id,
-    u.name,
-    u.email
-FROM
-    users u
-    INNER JOIN trip_members tm ON u.id = tm.user_id
-WHERE
-    tm.trip_id = @trip_id;

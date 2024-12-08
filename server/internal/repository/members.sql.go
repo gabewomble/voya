@@ -36,6 +36,68 @@ func (q *Queries) AddUserToTrip(ctx context.Context, arg AddUserToTripParams) er
 	return err
 }
 
+const getTripMembers = `-- name: GetTripMembers :many
+SELECT
+    u.id,
+    u.name,
+    u.email,
+    tm.member_status
+FROM
+    users u
+    INNER JOIN trip_members tm ON u.id = tm.user_id
+WHERE
+    tm.trip_id = $1
+`
+
+type GetTripMembersRow struct {
+	ID           uuid.UUID        `json:"id"`
+	Name         string           `json:"name"`
+	Email        string           `json:"email"`
+	MemberStatus MemberStatusEnum `json:"member_status"`
+}
+
+func (q *Queries) GetTripMembers(ctx context.Context, tripID uuid.UUID) ([]GetTripMembersRow, error) {
+	rows, err := q.db.Query(ctx, getTripMembers, tripID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTripMembersRow
+	for rows.Next() {
+		var i GetTripMembersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.MemberStatus,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const insertTripOwner = `-- name: InsertTripOwner :exec
+INSERT INTO
+    trip_members (trip_id, user_id, invited_by, member_status)
+VALUES
+    ($1, $2, NULL, 'owner')
+`
+
+type InsertTripOwnerParams struct {
+	TripID  uuid.UUID `json:"trip_id"`
+	OwnerID uuid.UUID `json:"owner_id"`
+}
+
+func (q *Queries) InsertTripOwner(ctx context.Context, arg InsertTripOwnerParams) error {
+	_, err := q.db.Exec(ctx, insertTripOwner, arg.TripID, arg.OwnerID)
+	return err
+}
+
 const updateTripMemberStatus = `-- name: UpdateTripMemberStatus :exec
 UPDATE
     trip_members
@@ -49,11 +111,11 @@ WHERE
 `
 
 type UpdateTripMemberStatusParams struct {
-	MemberStatus string    `json:"member_status"`
-	RemovedBy    uuid.UUID `json:"removed_by"`
-	RemovedAt    time.Time `json:"removed_at"`
-	TripID       uuid.UUID `json:"trip_id"`
-	UserID       uuid.UUID `json:"user_id"`
+	MemberStatus MemberStatusEnum `json:"member_status"`
+	RemovedBy    uuid.UUID        `json:"removed_by"`
+	RemovedAt    time.Time        `json:"removed_at"`
+	TripID       uuid.UUID        `json:"trip_id"`
+	UserID       uuid.UUID        `json:"user_id"`
 }
 
 func (q *Queries) UpdateTripMemberStatus(ctx context.Context, arg UpdateTripMemberStatusParams) error {

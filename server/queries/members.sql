@@ -1,3 +1,9 @@
+-- name: InsertTripOwner :exec
+INSERT INTO
+    trip_members (trip_id, user_id, invited_by, member_status)
+VALUES
+    (@trip_id, @owner_id, NULL, 'owner');
+
 -- name: AddUserToTrip :exec
 INSERT INTO
     trip_members (trip_id, user_id, invited_by, member_status)
@@ -20,3 +26,15 @@ SET
 WHERE
     trip_id = @trip_id
     AND user_id = @user_id;
+
+-- name: GetTripMembers :many
+SELECT
+    u.id,
+    u.name,
+    u.email,
+    tm.member_status
+FROM
+    users u
+    INNER JOIN trip_members tm ON u.id = tm.user_id
+WHERE
+    tm.trip_id = @trip_id;

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
@@ -25,6 +26,8 @@ type Service interface {
 	Close() error
 
 	Queries() *repository.Queries
+
+	Tx(ctx context.Context) (pgx.Tx, error)
 }
 
 type service struct {
@@ -89,7 +92,7 @@ func (s *service) Health() map[string]string {
 	if err != nil {
 		stats["status"] = "down"
 		stats["error"] = fmt.Sprintf("db down: %v", err)
-		log.Fatalf(fmt.Sprintf("db down: %v", err)) // Log the error and terminate the program
+		log.Fatalf("db down: %v", err) // Log the error and terminate the program
 		return stats
 	}
 
@@ -125,4 +128,8 @@ func (s *service) Close() error {
 	log.Printf("Disconnected from database: %s", database)
 	s.db.Close()
 	return nil
+}
+
+func (s *service) Tx(ctx context.Context) (pgx.Tx, error) {
+	return s.db.Begin(ctx)
 }

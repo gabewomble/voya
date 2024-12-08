@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"server/internal/data"
 	"server/internal/repository"
 	"server/internal/validator"
 	"time"
@@ -76,7 +75,7 @@ func (s *Server) addMemberToTripHandler(c *gin.Context) {
 func (s *Server) updateTripMemberStatusHandler(c *gin.Context) {
 	var input struct {
 		UserID       uuid.UUID `json:"user_id"`
-		MemberStatus string    `json:"member_status"`
+		MemberStatus repository.MemberStatusEnum    `json:"member_status"`
 	}
 
 	if err := c.BindJSON(&input); err != nil {
@@ -86,7 +85,7 @@ func (s *Server) updateTripMemberStatusHandler(c *gin.Context) {
 
 	v := validator.New()
 	v.Check(input.UserID != uuid.Nil, "user_id", "must be provided")
-	data.ValidateMemberStatus(v, input.MemberStatus, "member_status")
+	v.Check(input.MemberStatus != "", "member_status", "must be provided")
 
 	if !v.Valid() {
 		s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
@@ -127,7 +126,7 @@ func (s *Server) updateTripMemberStatusHandler(c *gin.Context) {
 		UserID:       input.UserID,
 	}
 
-	if input.MemberStatus == data.MemberStatus.Removed {
+	if input.MemberStatus == repository.MemberStatusEnumRemoved {
 		user := s.ctxGetUser(c)
 		updateTripParams.RemovedBy = user.ID
 		updateTripParams.RemovedAt = time.Now()
