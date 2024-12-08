@@ -17,7 +17,15 @@ DELETE FROM
     trips
 WHERE
     id = $1
-    AND owner_id = $2
+    AND id IN (
+        SELECT
+            trip_id
+        FROM
+            trip_members
+        WHERE
+            user_id = $2
+            AND member_status = 'owner'
+    )
 `
 
 type DeleteTripByIdParams struct {
@@ -32,7 +40,7 @@ func (q *Queries) DeleteTripById(ctx context.Context, arg DeleteTripByIdParams) 
 
 const getTripById = `-- name: GetTripById :one
 SELECT
-    id, name, description, start_date, end_date, created_at, updated_at, owner_id
+    id, name, description, start_date, end_date, created_at, updated_at
 FROM
     trips
 WHERE
@@ -65,26 +73,24 @@ func (q *Queries) GetTripById(ctx context.Context, arg GetTripByIdParams) (Trip,
 		&i.EndDate,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.OwnerID,
 	)
 	return i, err
 }
 
 const insertTrip = `-- name: InsertTrip :one
 INSERT INTO
-    trips (name, description, owner_id)
+    trips (name, description)
 VALUES
-    ($1, $2, $3) RETURNING id, name, description, start_date, end_date, created_at, updated_at, owner_id
+    ($1, $2) RETURNING id, name, description, start_date, end_date, created_at, updated_at
 `
 
 type InsertTripParams struct {
 	Name        string      `json:"name"`
 	Description pgtype.Text `json:"description"`
-	OwnerID     uuid.UUID   `json:"owner_id"`
 }
 
 func (q *Queries) InsertTrip(ctx context.Context, arg InsertTripParams) (Trip, error) {
-	row := q.db.QueryRow(ctx, insertTrip, arg.Name, arg.Description, arg.OwnerID)
+	row := q.db.QueryRow(ctx, insertTrip, arg.Name, arg.Description)
 	var i Trip
 	err := row.Scan(
 		&i.ID,
@@ -94,14 +100,13 @@ func (q *Queries) InsertTrip(ctx context.Context, arg InsertTripParams) (Trip, e
 		&i.EndDate,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.OwnerID,
 	)
 	return i, err
 }
 
 const listTrips = `-- name: ListTrips :many
 SELECT
-    id, name, description, start_date, end_date, created_at, updated_at, owner_id
+    id, name, description, start_date, end_date, created_at, updated_at
 FROM
     trips
 WHERE
@@ -132,7 +137,6 @@ func (q *Queries) ListTrips(ctx context.Context, userID uuid.UUID) ([]Trip, erro
 			&i.EndDate,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.OwnerID,
 		); err != nil {
 			return nil, err
 		}

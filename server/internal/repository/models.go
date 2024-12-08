@@ -75,7 +75,6 @@ type Trip struct {
 	EndDate     pgtype.Date `json:"end_date"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
-	OwnerID     uuid.UUID   `json:"owner_id"`
 }
 
 type TripMember struct {

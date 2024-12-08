@@ -74,8 +74,8 @@ func (s *Server) addMemberToTripHandler(c *gin.Context) {
 
 func (s *Server) updateTripMemberStatusHandler(c *gin.Context) {
 	var input struct {
-		UserID       uuid.UUID `json:"user_id"`
-		MemberStatus repository.MemberStatusEnum    `json:"member_status"`
+		UserID       uuid.UUID                   `json:"user_id"`
+		MemberStatus repository.MemberStatusEnum `json:"member_status"`
 	}
 
 	if err := c.BindJSON(&input); err != nil {

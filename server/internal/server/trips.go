@@ -42,7 +42,7 @@ func (s *Server) createTripHandler(c *gin.Context) {
 		return
 	}
 
-	input.OwnerID = s.ctxGetUser(c).ID
+	userID := s.ctxGetUser(c).ID
 
 	tx, err := s.db.Tx(c)
 	if err != nil {
@@ -61,8 +61,8 @@ func (s *Server) createTripHandler(c *gin.Context) {
 	}
 
 	err = queries.InsertTripOwner(c, repository.InsertTripOwnerParams{
-		TripID: trip.ID,
-		OwnerID: trip.OwnerID,
+		TripID:  trip.ID,
+		OwnerID: userID,
 	})
 
 	if err != nil {

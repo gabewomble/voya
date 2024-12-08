@@ -4,17 +4,18 @@ go 1.22.0
 
 require (
 	github.com/gin-gonic/gin v1.10.0
+	github.com/go-mail/mail/v2 v2.3.0
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/joho/godotenv v1.5.1
 	github.com/testcontainers/testcontainers-go v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.33.0
+	go.uber.org/zap v1.27.0
 )
 
 require (
-	github.com/go-mail/mail/v2 v2.3.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+	gopkg.in/mail.v2 v2.3.1 // indirect
 )
 
 require (

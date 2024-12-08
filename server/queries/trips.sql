@@ -1,8 +1,8 @@
 -- name: InsertTrip :one
 INSERT INTO
-    trips (name, description, owner_id)
+    trips (name, description)
 VALUES
-    (@name, @description, @owner_id) RETURNING *;
+    (@name, @description) RETURNING *;
 
 -- name: GetTripById :one
 SELECT
@@ -27,7 +27,15 @@ DELETE FROM
     trips
 WHERE
     id = @id
-    AND owner_id = @user_id;
+    AND id IN (
+        SELECT
+            trip_id
+        FROM
+            trip_members
+        WHERE
+            user_id = @user_id
+            AND member_status = 'owner'
+    );
 
 -- name: ListTrips :many
 SELECT
