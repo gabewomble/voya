@@ -25,11 +25,13 @@ func (s *Server) handleNotifyMemberStatusUpdate(c *gin.Context, params handleNot
 	switch params.MemberStatus {
 	case repository.MemberStatusEnumAccepted:
 		insertNotificationParams.Type = repository.NotificationTypeTripInviteAccepted
-		insertNotificationParams.Message = "You have accepted a trip invite"
+		insertNotificationParams.Message = "A user has accepted your trip invitation"
+		insertNotificationParams.UserID = params.OwnerID
 
 	case repository.MemberStatusEnumDeclined:
 		insertNotificationParams.Type = repository.NotificationTypeTripInviteDeclined
-		insertNotificationParams.Message = "You have declined a trip invite"
+		insertNotificationParams.Message = "A user has declined your trip invitation"
+		insertNotificationParams.UserID = params.OwnerID
 
 	case repository.MemberStatusEnumRemoved:
 		insertNotificationParams.Type = repository.NotificationTypeTripMemberRemoved
