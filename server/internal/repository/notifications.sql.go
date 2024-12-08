@@ -267,3 +267,18 @@ func (q *Queries) MarkNotificationAsRead(ctx context.Context, arg MarkNotificati
 	_, err := q.db.Exec(ctx, markNotificationAsRead, arg.ID, arg.UserID)
 	return err
 }
+
+const markNotificationsAsRead = `-- name: MarkNotificationsAsRead :exec
+UPDATE
+    notifications
+SET
+    read_at = NOW()
+WHERE
+    user_id = $1
+    AND read_at IS NULL
+`
+
+func (q *Queries) MarkNotificationsAsRead(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, markNotificationsAsRead, userID)
+	return err
+}

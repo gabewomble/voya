@@ -48,12 +48,13 @@ func (s *Server) RegisterRoutes() http.Handler {
 		protected.PATCH("/trip/:id/members", s.updateTripMemberStatusHandler)
 
 		// Notifications
-		// protected.GET("/notification/:id", s.getNotificationByIdHandler)
-		// protected.DELETE("/notification/:id", s.deleteNotificationByIdHandler)
+		protected.GET("/notification/:id", s.getNotificationByIdHandler)
+		protected.POST("/notification/:id/read", s.markNotificationAsReadHandler)
+		protected.DELETE("/notification/:id", s.deleteNotificationHandler)
 		protected.GET("/notifications", s.listNotificationsHandler)
-		// protected.GET("/notifications/unread", s.listUnreadNotificationsHandler)
-		// protected.GET("/notifications/count", s.countNotificationsHandler)
-		// protected.POST("/notifications/read", s.markNotificationsAsReadHandler)
+		protected.GET("/notifications/unread", s.listUnreadNotificationsHandler)
+		protected.GET("/notifications/unread/count", s.countUnreadNotificationsHandler)
+		protected.POST("/notifications/read", s.markNotificationsAsReadHandler)
 	}
 
 	return r

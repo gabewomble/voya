@@ -31,6 +31,15 @@ WHERE
     id = @id
     AND user_id = @user_id;
 
+-- name: MarkNotificationsAsRead :exec
+UPDATE
+    notifications
+SET
+    read_at = NOW()
+WHERE
+    user_id = @user_id
+    AND read_at IS NULL;
+
 -- name: GetNotificationById :one
 SELECT
     id,
