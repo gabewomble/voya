@@ -139,3 +139,14 @@ WHERE
     AND (id != @user_id)
 LIMIT
     @user_limit;
+
+-- name: CheckUserExists :one
+SELECT
+    EXISTS (
+        SELECT
+            1
+        FROM
+            users
+        WHERE
+            id = @id
+    );

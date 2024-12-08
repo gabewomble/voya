@@ -24,3 +24,10 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 
 CREATE INDEX idx_notifications_created_at ON notifications(created_at);
+
+-- Rename column if it exists
+ALTER TABLE
+    trip_members RENAME COLUMN removed_by TO updated_by;
+
+ALTER TABLE
+    trip_members DROP COLUMN IF EXISTS removed_at;

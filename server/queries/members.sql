@@ -13,16 +13,15 @@ UPDATE
 SET
     invited_by = EXCLUDED.invited_by,
     member_status = 'pending',
-    removed_by = NULL,
-    removed_at = NULL;
+    updated_by = EXCLUDED.updated_by,
+    updated_at = CURRENT_TIMESTAMP;
 
 -- name: UpdateTripMemberStatus :exec
 UPDATE
     trip_members
 SET
     member_status = @member_status,
-    removed_by = @removed_by,
-    removed_at = @removed_at,
+    updated_by = @updated_by,
     updated_at = CURRENT_TIMESTAMP
 WHERE
     trip_id = @trip_id
@@ -33,6 +32,7 @@ SELECT
     u.id,
     u.name,
     u.email,
+    tm.updated_by,
     tm.updated_at,
     tm.member_status
 FROM
@@ -46,6 +46,7 @@ SELECT
     u.id,
     u.name,
     u.email,
+    tm.updated_by,
     tm.updated_at,
     tm.member_status
 FROM
@@ -60,6 +61,7 @@ SELECT
     u.id,
     u.name,
     u.email,
+    tm.updated_by,
     tm.updated_at,
     tm.member_status
 FROM
@@ -68,3 +70,15 @@ FROM
 WHERE
     tm.trip_id = @trip_id
     AND tm.member_status = 'owner';
+
+-- name: CheckUserIsTripMember :one
+SELECT
+    EXISTS(
+        SELECT
+            1
+        FROM
+            trip_members
+        WHERE
+            trip_id = @trip_id
+            AND user_id = @user_id
+    );

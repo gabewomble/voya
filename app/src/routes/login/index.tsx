@@ -25,69 +25,77 @@ const loginFormSchema = z.object({
 
 type LoginForm = z.infer<typeof loginFormSchema>;
 
-export const useLoginAction = formAction$<LoginForm>(async (data, request) => {
-  const res = await serverFetch(
-    "/tokens/authenticate",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    },
-    request,
-  );
-
-  if (!res.ok) {
-    const { errors } = ((await res.json()) ?? { errors: [] }) as ErrorResponse;
-
-    if (errors.some((error) => error.message === NOT_ACTIVATED)) {
-      const resendRes = await serverFetch(
-        "/users/resend-activation",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            identifier: data.identifier,
-          }),
+export const useLoginAction = formAction$<LoginForm>(
+  async ({ identifier, password }, request) => {
+    const res = await serverFetch(
+      "/tokens/authenticate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        request,
-      );
+        body: JSON.stringify({
+          identifier: identifier.trim(),
+          password,
+        }),
+      },
+      request,
+    );
 
-      if (resendRes.ok) {
-        throw request.redirect(303, "/activate?i=" + data.identifier);
+    if (!res.ok) {
+      const { errors } = ((await res.json()) ?? {
+        errors: [],
+      }) as ErrorResponse;
+
+      if (errors.some((error) => error.message === NOT_ACTIVATED)) {
+        const resendRes = await serverFetch(
+          "/users/resend-activation",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              identifier: data.identifier,
+            }),
+          },
+          request,
+        );
+
+        if (resendRes.ok) {
+          throw request.redirect(303, "/activate?i=" + data.identifier);
+        }
       }
+
+      const { messages, fields } = mapServerErrors({
+        errors,
+        messages: {
+          [INVALID_CREDENTIAL_ERROR]: "Invalid credentials",
+        },
+        fields: {
+          identifier: {},
+          password: {},
+        },
+      });
+
+      return {
+        message: messages[0],
+        errors: {
+          identifier: fields.identifier[0],
+          password: fields.password[0],
+        },
+      };
     }
 
-    const { messages, fields } = mapServerErrors({
-      errors,
-      messages: {
-        [INVALID_CREDENTIAL_ERROR]: "Invalid credentials",
-      },
-      fields: {
-        identifier: {},
-        password: {},
-      },
-    });
+    const json = await res.json();
+    const token = json.token;
 
-    return {
-      message: messages[0],
-      errors: {
-        identifier: fields.identifier[0],
-        password: fields.password[0],
-      },
-    };
-  }
+    setCookie("token", token, request);
 
-  const json = await res.json();
-  const token = json.token;
-
-  setCookie("token", token, request);
-
-  throw request.redirect(303, "/trips");
-}, zodForm$(loginFormSchema));
+    throw request.redirect(303, "/trips");
+  },
+  zodForm$(loginFormSchema),
+);
 
 export const useFormLoader = routeLoader$<InitialValues<LoginForm>>(() => ({
   identifier: "",

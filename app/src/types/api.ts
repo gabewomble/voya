@@ -19,6 +19,8 @@ export const getTripByIdResponseSchema = z.object({
       name: z.string(),
       email: z.string(),
       member_status: memberStatusEnum,
+      updated_at: z.string().optional(),
+      updated_by: z.string().uuid().optional(),
     }),
   ),
 });

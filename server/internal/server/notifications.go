@@ -17,8 +17,6 @@ type handleNotifyMemberStatusUpdateParams struct {
 }
 
 func (s *Server) handleNotifyMemberStatusUpdate(c *gin.Context, params handleNotifyMemberStatusUpdateParams) error {
-	currentUser := s.ctxGetUser(c)
-
 	insertNotificationParams := repository.InsertNotificationParams{
 		UserID: params.TargetUserID,
 		TripID: params.TripID,
@@ -26,47 +24,43 @@ func (s *Server) handleNotifyMemberStatusUpdate(c *gin.Context, params handleNot
 
 	switch params.MemberStatus {
 	case repository.MemberStatusEnumAccepted:
-		metadata, err := json.Marshal(map[string]any{
-			"user_id":   currentUser.ID,
-			"user_name": currentUser.Name,
-		})
-
-		if err != nil {
-			s.log.LogError(c, "handleNotifyMemberStatusUpdate: json.Marshal failed", err)
-			return err
-		}
-
 		insertNotificationParams.Type = repository.NotificationTypeTripInviteAccepted
 		insertNotificationParams.Message = "You have accepted a trip invite"
-		insertNotificationParams.Metadata = metadata
 
-		err = params.Queries.InsertNotification(c, insertNotificationParams)
-
-		if err != nil {
-			s.log.LogError(c, "handleNotifyMemberStatusUpdate: InsertNotification failed", err)
-			return err
-		}
 	case repository.MemberStatusEnumDeclined:
-		metadata, err := json.Marshal(map[string]any{
-			"user_id":   currentUser.ID,
-			"user_name": currentUser.Name,
-		})
-
-		if err != nil {
-			s.log.LogError(c, "handleNotifyMemberStatusUpdate: json.Marshal failed", err)
-			return err
-		}
-
 		insertNotificationParams.Type = repository.NotificationTypeTripInviteDeclined
 		insertNotificationParams.Message = "You have declined a trip invite"
-		insertNotificationParams.Metadata = metadata
 
-		err = params.Queries.InsertNotification(c, insertNotificationParams)
+	case repository.MemberStatusEnumRemoved:
+		insertNotificationParams.Type = repository.NotificationTypeTripMemberRemoved
+		insertNotificationParams.Message = "You have been removed from a trip"
 
-		if err != nil {
-			s.log.LogError(c, "handleNotifyMemberStatusUpdate: InsertNotification failed", err)
-			return err
-		}
+	case repository.MemberStatusEnumOwner:
+		insertNotificationParams.Type = repository.NotificationTypeTripOwnershipTransfer
+		insertNotificationParams.Message = "You are now the owner of a trip"
+
+	default:
+		return nil
+	}
+
+	currentUser := s.ctxGetUser(c)
+
+	metadata, err := json.Marshal(map[string]any{
+		"user_id":   currentUser.ID,
+		"user_name": currentUser.Name,
+	})
+	insertNotificationParams.Metadata = metadata
+
+	if err != nil {
+		s.log.LogError(c, "handleNotifyMemberStatusUpdate: json.Marshal failed", err)
+		return err
+	}
+
+	err = params.Queries.InsertNotification(c, insertNotificationParams)
+
+	if err != nil {
+		s.log.LogError(c, "handleNotifyMemberStatusUpdate: InsertNotification failed", err)
+		return err
 	}
 	return nil
 }

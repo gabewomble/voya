@@ -46,7 +46,6 @@ func (s *Server) RegisterRoutes() http.Handler {
 		// Trip Members
 		protected.POST("/trips/m/:id", s.addMemberToTripHandler)
 		protected.PATCH("/trips/m/:id", s.updateTripMemberStatusHandler)
-
 	}
 
 	return r

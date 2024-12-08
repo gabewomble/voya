@@ -149,28 +149,37 @@ func (s *Server) deleteTripByIdHandler(c *gin.Context) {
 }
 
 var (
-	ErrInvalidTripID = errors.New("invalid trip id")
-	ErrTripNotFound  = errors.New("trip not found")
-	ErrUserNotFound  = errors.New("user not found")
+	ErrTripNotFound = errors.New("trip not found")
+	ErrUserNotFound = errors.New("user not found")
 )
 
-func (s *Server) validateTripAccess(c *gin.Context, tripID uuid.UUID, userID uuid.UUID) error {
-    _, err := s.db.Queries().GetTripById(c, repository.GetTripByIdParams{
-        ID:     tripID,
-        UserID: userID,
-    })
-    if err != nil {
-        s.log.LogError(c, "validateTripAccess: GetTripById failed", err)
-        return ErrTripNotFound
-    }
-    return nil
+func (s *Server) validateTripAccess(c *gin.Context, tripID uuid.UUID, userID uuid.UUID) (bool, error) {
+	ok, err := s.db.Queries().CheckUserCanViewTrip(c, repository.CheckUserCanViewTripParams{
+		ID:     tripID,
+		UserID: userID,
+	})
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return false, ErrTripNotFound
+		}
+		s.log.LogError(c, "validateTripAccess: GetTripById failed", err)
+		return false, err
+	}
+
+	return ok, nil
 }
 
-func (s *Server) validateUser(c *gin.Context, userID uuid.UUID) error {
-    _, err := s.db.Queries().GetUserById(c, userID)
-    if err != nil {
-        s.log.LogError(c, "validateUser: GetUserById failed", err)
-        return ErrUserNotFound
-    }
-    return nil
+func (s *Server) validateUser(c *gin.Context, userID uuid.UUID) (bool, error) {
+	ok, err := s.db.Queries().CheckUserExists(c, userID)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return false, ErrUserNotFound
+		}
+		s.log.LogError(c, "validateUser: GetUserById failed", err)
+		return false, err
+	}
+
+	return ok, nil
 }

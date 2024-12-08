@@ -21,8 +21,8 @@ UPDATE
 SET
     invited_by = EXCLUDED.invited_by,
     member_status = 'pending',
-    removed_by = NULL,
-    removed_at = NULL
+    updated_by = EXCLUDED.updated_by,
+    updated_at = CURRENT_TIMESTAMP
 `
 
 type AddUserToTripParams struct {
@@ -36,11 +36,37 @@ func (q *Queries) AddUserToTrip(ctx context.Context, arg AddUserToTripParams) er
 	return err
 }
 
+const checkUserIsTripMember = `-- name: CheckUserIsTripMember :one
+SELECT
+    EXISTS(
+        SELECT
+            1
+        FROM
+            trip_members
+        WHERE
+            trip_id = $1
+            AND user_id = $2
+    )
+`
+
+type CheckUserIsTripMemberParams struct {
+	TripID uuid.UUID `json:"trip_id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) CheckUserIsTripMember(ctx context.Context, arg CheckUserIsTripMemberParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUserIsTripMember, arg.TripID, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getTripMember = `-- name: GetTripMember :one
 SELECT
     u.id,
     u.name,
     u.email,
+    tm.updated_by,
     tm.updated_at,
     tm.member_status
 FROM
@@ -60,6 +86,7 @@ type GetTripMemberRow struct {
 	ID           uuid.UUID        `json:"id"`
 	Name         string           `json:"name"`
 	Email        string           `json:"email"`
+	UpdatedBy    uuid.UUID        `json:"updated_by"`
 	UpdatedAt    time.Time        `json:"updated_at"`
 	MemberStatus MemberStatusEnum `json:"member_status"`
 }
@@ -71,6 +98,7 @@ func (q *Queries) GetTripMember(ctx context.Context, arg GetTripMemberParams) (G
 		&i.ID,
 		&i.Name,
 		&i.Email,
+		&i.UpdatedBy,
 		&i.UpdatedAt,
 		&i.MemberStatus,
 	)
@@ -82,6 +110,7 @@ SELECT
     u.id,
     u.name,
     u.email,
+    tm.updated_by,
     tm.updated_at,
     tm.member_status
 FROM
@@ -95,6 +124,7 @@ type GetTripMembersRow struct {
 	ID           uuid.UUID        `json:"id"`
 	Name         string           `json:"name"`
 	Email        string           `json:"email"`
+	UpdatedBy    uuid.UUID        `json:"updated_by"`
 	UpdatedAt    time.Time        `json:"updated_at"`
 	MemberStatus MemberStatusEnum `json:"member_status"`
 }
@@ -112,6 +142,7 @@ func (q *Queries) GetTripMembers(ctx context.Context, tripID uuid.UUID) ([]GetTr
 			&i.ID,
 			&i.Name,
 			&i.Email,
+			&i.UpdatedBy,
 			&i.UpdatedAt,
 			&i.MemberStatus,
 		); err != nil {
@@ -130,6 +161,7 @@ SELECT
     u.id,
     u.name,
     u.email,
+    tm.updated_by,
     tm.updated_at,
     tm.member_status
 FROM
@@ -144,6 +176,7 @@ type GetTripOwnerRow struct {
 	ID           uuid.UUID        `json:"id"`
 	Name         string           `json:"name"`
 	Email        string           `json:"email"`
+	UpdatedBy    uuid.UUID        `json:"updated_by"`
 	UpdatedAt    time.Time        `json:"updated_at"`
 	MemberStatus MemberStatusEnum `json:"member_status"`
 }
@@ -155,6 +188,7 @@ func (q *Queries) GetTripOwner(ctx context.Context, tripID uuid.UUID) (GetTripOw
 		&i.ID,
 		&i.Name,
 		&i.Email,
+		&i.UpdatedBy,
 		&i.UpdatedAt,
 		&i.MemberStatus,
 	)
@@ -183,18 +217,16 @@ UPDATE
     trip_members
 SET
     member_status = $1,
-    removed_by = $2,
-    removed_at = $3,
+    updated_by = $2,
     updated_at = CURRENT_TIMESTAMP
 WHERE
-    trip_id = $4
-    AND user_id = $5
+    trip_id = $3
+    AND user_id = $4
 `
 
 type UpdateTripMemberStatusParams struct {
 	MemberStatus MemberStatusEnum `json:"member_status"`
-	RemovedBy    uuid.UUID        `json:"removed_by"`
-	RemovedAt    time.Time        `json:"removed_at"`
+	UpdatedBy    uuid.UUID        `json:"updated_by"`
 	TripID       uuid.UUID        `json:"trip_id"`
 	UserID       uuid.UUID        `json:"user_id"`
 }
@@ -202,8 +234,7 @@ type UpdateTripMemberStatusParams struct {
 func (q *Queries) UpdateTripMemberStatus(ctx context.Context, arg UpdateTripMemberStatusParams) error {
 	_, err := q.db.Exec(ctx, updateTripMemberStatus,
 		arg.MemberStatus,
-		arg.RemovedBy,
-		arg.RemovedAt,
+		arg.UpdatedBy,
 		arg.TripID,
 		arg.UserID,
 	)

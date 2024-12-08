@@ -52,7 +52,7 @@ WHERE
             user_id = @user_id
     );
 
--- name: CheckTripExists :one
+-- name: CheckUserCanViewTrip :one
 SELECT
     EXISTS(
         SELECT
@@ -61,4 +61,35 @@ SELECT
             trips
         WHERE
             id = @id
+            AND id IN (
+                SELECT
+                    trip_id
+                FROM
+                    trip_members
+                WHERE
+                    user_id = @user_id
+            )
+    );
+
+-- name: CheckUserCanEditTrip :one
+SELECT
+    EXISTS(
+        SELECT
+            1
+        FROM
+            trips
+        WHERE
+            id = @id
+            AND id IN (
+                SELECT
+                    trip_id
+                FROM
+                    trip_members
+                WHERE
+                    user_id = @user_id
+                    AND (
+                        member_status = 'accepted'
+                        OR member_status = 'owner'
+                    )
+            )
     );

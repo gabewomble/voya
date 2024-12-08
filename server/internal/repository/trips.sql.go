@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const checkTripExists = `-- name: CheckTripExists :one
+const checkUserCanEditTrip = `-- name: CheckUserCanEditTrip :one
 SELECT
     EXISTS(
         SELECT
@@ -21,11 +21,60 @@ SELECT
             trips
         WHERE
             id = $1
+            AND id IN (
+                SELECT
+                    trip_id
+                FROM
+                    trip_members
+                WHERE
+                    user_id = $2
+                    AND (
+                        member_status = 'accepted'
+                        OR member_status = 'owner'
+                    )
+            )
     )
 `
 
-func (q *Queries) CheckTripExists(ctx context.Context, id uuid.UUID) (bool, error) {
-	row := q.db.QueryRow(ctx, checkTripExists, id)
+type CheckUserCanEditTripParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) CheckUserCanEditTrip(ctx context.Context, arg CheckUserCanEditTripParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUserCanEditTrip, arg.ID, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const checkUserCanViewTrip = `-- name: CheckUserCanViewTrip :one
+SELECT
+    EXISTS(
+        SELECT
+            1
+        FROM
+            trips
+        WHERE
+            id = $1
+            AND id IN (
+                SELECT
+                    trip_id
+                FROM
+                    trip_members
+                WHERE
+                    user_id = $2
+            )
+    )
+`
+
+type CheckUserCanViewTripParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) CheckUserCanViewTrip(ctx context.Context, arg CheckUserCanViewTripParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUserCanViewTrip, arg.ID, arg.UserID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
