@@ -13,16 +13,30 @@ const addMemberFormSchema = z.object({
     .min(4, "Username or email must be at least 4 characters long."),
 });
 
-export const searchUsers = server$(async function (identifier: string) {
-  if (!addMemberFormSchema.safeParse({ identifier }).success) {
+export type AddMemberForm = z.infer<typeof addMemberFormSchema>;
+
+const searchUsersInputSchema = z.object({
+  identifier: addMemberFormSchema.shape.identifier,
+  tripID: z.string().uuid(),
+});
+
+type SearchUserInput = z.infer<typeof searchUsersInputSchema>;
+
+export const searchUsers = server$(async function (input: SearchUserInput) {
+  if (!searchUsersInputSchema.safeParse(input).success) {
     return [];
   }
+
   const requestEvent = this;
   const response = await serverFetch(
     "/users/search",
     {
       method: "POST",
-      body: JSON.stringify({ identifier, limit: 5 }),
+      body: JSON.stringify({
+        identifier: input.identifier,
+        trip_id: input.tripID,
+        limit: 5,
+      }),
     },
     requestEvent,
   );
@@ -38,7 +52,7 @@ export const searchUsers = server$(async function (identifier: string) {
 });
 
 export const Members = component$(() => {
-  const { members } = useTripData().value;
+  const { trip, members } = useTripData().value;
 
   const userSearch = useSignal("");
   const searchTimeoutId = useSignal<number>();
@@ -54,7 +68,10 @@ export const Members = component$(() => {
       window.clearTimeout(searchTimeoutId.value);
       searchTimeoutId.value = window.setTimeout(async () => {
         window.clearTimeout(searchTimeoutId.value);
-        userSuggestions.value = await searchUsers(searchValue);
+        userSuggestions.value = await searchUsers({
+          identifier: searchValue,
+          tripID: trip.id,
+        });
       }, 250);
     } else {
       userSuggestions.value = [];

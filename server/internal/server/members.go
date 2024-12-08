@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"net/http"
 	"server/internal/data"
 	"server/internal/repository"
@@ -38,30 +37,24 @@ func (s *Server) addMemberToTripHandler(c *gin.Context) {
 	user := s.ctxGetUser(c)
 
 	// Validate trip access
-	if ok, err := s.validateTripAccess(c, tripID, user.ID); !ok {
-		switch err {
-		case ErrTripNotFound:
-			v.AddError("trip_id", "unable to find or access trip for trip_id")
-			s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
-			return
-		case nil:
-			err = errors.New("unable to validate trip access")
-		}
-		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+	if ok, err := s.validateTripAccess(c, validateTripAccessParams{
+		TripID: tripID,
+		UserID: user.ID,
+		IsEdit: true,
+	}); !ok {
+		s.handleInvalidTripAccess(c, handleInvalidTripAccessParams{
+			validator: v,
+			err:       err,
+		})
 		return
 	}
 
 	// Validate target user
 	if ok, err := s.validateUser(c, input.UserID); !ok {
-		switch err {
-		case ErrUserNotFound:
-			v.AddError("user_id", "unable to find user for user_id")
-			s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
-			return
-		case nil:
-			err = errors.New("unable to validate user")
-		}
-		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		s.handleInvalidUser(c, handleInvalidUserParams{
+			validator: v,
+			err:       err,
+		})
 		return
 	}
 
@@ -151,30 +144,24 @@ func (s *Server) updateTripMemberStatusHandler(c *gin.Context) {
 	currentUser := s.ctxGetUser(c)
 
 	// Validate trip access
-	if ok, err := s.validateTripAccess(c, tripID, currentUser.ID); !ok {
-		switch err {
-		case ErrTripNotFound:
-			v.AddError("trip_id", "unable to find or access trip for trip_id")
-			s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
-			return
-		case nil:
-			err = errors.New("unable to validate trip access")
-		}
-		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+	if ok, err := s.validateTripAccess(c, validateTripAccessParams{
+		TripID: tripID,
+		UserID: currentUser.ID,
+		IsEdit: false,
+	}); !ok {
+		s.handleInvalidTripAccess(c, handleInvalidTripAccessParams{
+			validator: v,
+			err:       err,
+		})
 		return
 	}
 
 	// Validate target user
 	if ok, err := s.validateUser(c, input.UserID); !ok {
-		switch err {
-		case ErrUserNotFound:
-			v.AddError("user_id", "unable to find user for user_id")
-			s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
-			return
-		case nil:
-			err = errors.New("unable to validate user")
-		}
-		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		s.handleInvalidUser(c, handleInvalidUserParams{
+			validator: v,
+			err:       err,
+		})
 		return
 	}
 

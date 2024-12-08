@@ -13,7 +13,7 @@ export const useAddMemberLoader = routeLoader$<InitialValues<AddMemberForm>>(
 
 export const useTripData = routeLoader$(async (requestEvent) => {
   const { id } = requestEvent.params;
-  const res = await serverFetch(`/trips/t/${id}`, {}, requestEvent);
+  const res = await serverFetch(`/trip/${id}`, {}, requestEvent);
   const json = await res.json();
   return getTripByIdResponseSchema.parse(json);
 });

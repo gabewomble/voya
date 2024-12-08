@@ -153,11 +153,27 @@ var (
 	ErrUserNotFound = errors.New("user not found")
 )
 
-func (s *Server) validateTripAccess(c *gin.Context, tripID uuid.UUID, userID uuid.UUID) (bool, error) {
-	ok, err := s.db.Queries().CheckUserCanViewTrip(c, repository.CheckUserCanViewTripParams{
-		ID:     tripID,
-		UserID: userID,
-	})
+type validateTripAccessParams struct {
+	TripID uuid.UUID
+	UserID uuid.UUID
+	IsEdit bool
+}
+
+func (s *Server) validateTripAccess(c *gin.Context, params validateTripAccessParams) (bool, error) {
+	var ok bool
+	var err error
+
+	if !params.IsEdit {
+		ok, err = s.db.Queries().CheckUserCanViewTrip(c, repository.CheckUserCanViewTripParams{
+			ID:     params.TripID,
+			UserID: params.UserID,
+		})
+	} else {
+		ok, err = s.db.Queries().CheckUserCanEditTrip(c, repository.CheckUserCanEditTripParams{
+			ID:     params.TripID,
+			UserID: params.UserID,
+		})
+	}
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -170,16 +186,19 @@ func (s *Server) validateTripAccess(c *gin.Context, tripID uuid.UUID, userID uui
 	return ok, nil
 }
 
-func (s *Server) validateUser(c *gin.Context, userID uuid.UUID) (bool, error) {
-	ok, err := s.db.Queries().CheckUserExists(c, userID)
+type handleInvalidTripAccessParams struct {
+	validator *validator.Validator
+	err       error
+}
 
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return false, ErrUserNotFound
-		}
-		s.log.LogError(c, "validateUser: GetUserById failed", err)
-		return false, err
+func (s *Server) handleInvalidTripAccess(c *gin.Context, params handleInvalidTripAccessParams) {
+	switch params.err {
+	case ErrTripNotFound:
+		params.validator.AddError("trip_id", "unable to find or access trip for trip_id")
+		s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: params.validator}))
+		return
+	case nil:
+		params.err = errors.New("unable to validate trip access")
 	}
-
-	return ok, nil
+	s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(params.err))
 }

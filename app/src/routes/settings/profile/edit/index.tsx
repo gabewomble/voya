@@ -29,7 +29,7 @@ export const useUpdateProfileAction = formAction$<UpdateProfileForm>(
   async (data, request) => {
     const user = request.sharedMap.get("user") as User;
     const res = await serverFetch(
-      `/users/u/${user.username}`,
+      `/user/${user.username}`,
       {
         method: "PATCH",
         headers: {

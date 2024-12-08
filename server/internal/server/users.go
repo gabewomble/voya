@@ -20,8 +20,9 @@ var appUrl = os.Getenv("APP_URL")
 
 func (s *Server) searchUsersHandler(c *gin.Context) {
 	var input struct {
-		Identifier string `json:"identifier"`
-		Limit      int    `json:"limit"`
+		Identifier string    `json:"identifier"`
+		Limit      int       `json:"limit"`
+		TripID     uuid.UUID `json:"trip_id"`
 	}
 	if err := c.BindJSON(&input); err != nil {
 		s.badRequest(c, errorDetailsFromError(err))
@@ -45,11 +46,36 @@ func (s *Server) searchUsersHandler(c *gin.Context) {
 
 	currentUser := s.ctxGetUser(c)
 
-	users, err := s.db.Queries().SearchUsers(c, repository.SearchUsersParams{
-		Identifier: identifier,
-		UserLimit:  int32(input.Limit),
-		UserID:     currentUser.ID,
-	})
+	var users []repository.User
+	var err error
+
+	if input.TripID != uuid.Nil {
+		// Validate trip access
+		if ok, err := s.validateTripAccess(c, validateTripAccessParams{
+			TripID: input.TripID,
+			UserID: currentUser.ID,
+			IsEdit: true,
+		}); !ok {
+			s.handleInvalidTripAccess(c, handleInvalidTripAccessParams{
+				validator: v,
+				err:       err,
+			})
+			return
+		}
+
+		users, err = s.db.Queries().SearchUsersNotInTrip(c, repository.SearchUsersNotInTripParams{
+			Identifier: identifier,
+			TripID:     input.TripID,
+			UserLimit:  int32(input.Limit),
+		})
+	} else {
+		users, err = s.db.Queries().SearchUsers(c, repository.SearchUsersParams{
+			Identifier: identifier,
+			UserLimit:  int32(input.Limit),
+			UserID:     currentUser.ID,
+		})
+	}
+
 	if err != nil {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
@@ -407,4 +433,35 @@ func (s *Server) generateAndSendActivationToken(c *gin.Context, userID uuid.UUID
 	})
 
 	return nil
+}
+
+func (s *Server) validateUser(c *gin.Context, userID uuid.UUID) (bool, error) {
+	ok, err := s.db.Queries().CheckUserExists(c, userID)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return false, ErrUserNotFound
+		}
+		s.log.LogError(c, "validateUser: GetUserById failed", err)
+		return false, err
+	}
+
+	return ok, nil
+}
+
+type handleInvalidUserParams struct {
+	validator *validator.Validator
+	err       error
+}
+
+func (s *Server) handleInvalidUser(c *gin.Context, params handleInvalidUserParams) {
+	switch params.err {
+	case ErrUserNotFound:
+		params.validator.AddError("user_id", "unable to find user for user_id")
+		s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: params.validator}))
+		return
+	case nil:
+		params.err = errors.New("unable to validate user")
+	}
+	s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(params.err))
 }

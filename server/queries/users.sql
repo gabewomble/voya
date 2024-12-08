@@ -150,3 +150,32 @@ SELECT
         WHERE
             id = @id
     );
+
+-- name: SearchUsersNotInTrip :many
+SELECT
+    u.id,
+    u.created_at,
+    u.name,
+    u.email,
+    u.password_hash,
+    u.activated,
+    u.version,
+    u.username
+FROM
+    users u
+WHERE
+    u.id NOT IN (
+        SELECT
+            user_id
+        FROM
+            trip_members
+        WHERE
+            trip_id = @trip_id
+    )
+    AND (
+        u.name ILIKE '%' || @identifier || '%'
+        OR u.email ILIKE '%' || @identifier || '%'
+        OR u.username ILIKE '%' || @identifier || '%'
+    )
+LIMIT
+    @user_limit;

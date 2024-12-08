@@ -329,6 +329,70 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Use
 	return items, nil
 }
 
+const searchUsersNotInTrip = `-- name: SearchUsersNotInTrip :many
+SELECT
+    u.id,
+    u.created_at,
+    u.name,
+    u.email,
+    u.password_hash,
+    u.activated,
+    u.version,
+    u.username
+FROM
+    users u
+WHERE
+    u.id NOT IN (
+        SELECT
+            user_id
+        FROM
+            trip_members
+        WHERE
+            trip_id = $1
+    )
+    AND (
+        u.name ILIKE '%' || $2 || '%'
+        OR u.email ILIKE '%' || $2 || '%'
+        OR u.username ILIKE '%' || $2 || '%'
+    )
+    LIMIT $3
+`
+
+type SearchUsersNotInTripParams struct {
+	TripID     uuid.UUID   `json:"trip_id"`
+	Identifier pgtype.Text `json:"identifier"`
+	UserLimit  int32       `json:"user_limit"`
+}
+
+func (q *Queries) SearchUsersNotInTrip(ctx context.Context, arg SearchUsersNotInTripParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, searchUsersNotInTrip, arg.TripID, arg.Identifier, arg.UserLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.Name,
+			&i.Email,
+			&i.PasswordHash,
+			&i.Activated,
+			&i.Version,
+			&i.Username,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE
     users
