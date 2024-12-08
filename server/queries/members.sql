@@ -22,7 +22,8 @@ UPDATE
 SET
     member_status = @member_status,
     removed_by = @removed_by,
-    removed_at = @removed_at
+    removed_at = @removed_at,
+    updated_at = CURRENT_TIMESTAMP
 WHERE
     trip_id = @trip_id
     AND user_id = @user_id;
@@ -32,6 +33,7 @@ SELECT
     u.id,
     u.name,
     u.email,
+    tm.updated_at,
     tm.member_status
 FROM
     users u

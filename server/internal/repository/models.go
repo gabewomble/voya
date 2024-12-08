@@ -84,6 +84,7 @@ type TripMember struct {
 	MemberStatus MemberStatusEnum `json:"member_status"`
 	RemovedBy    uuid.UUID        `json:"removed_by"`
 	RemovedAt    time.Time        `json:"removed_at"`
+	UpdatedAt    time.Time        `json:"updated_at"`
 }
 
 type User struct {

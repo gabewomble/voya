@@ -41,6 +41,7 @@ SELECT
     u.id,
     u.name,
     u.email,
+    tm.updated_at,
     tm.member_status
 FROM
     users u
@@ -53,6 +54,7 @@ type GetTripMembersRow struct {
 	ID           uuid.UUID        `json:"id"`
 	Name         string           `json:"name"`
 	Email        string           `json:"email"`
+	UpdatedAt    time.Time        `json:"updated_at"`
 	MemberStatus MemberStatusEnum `json:"member_status"`
 }
 
@@ -69,6 +71,7 @@ func (q *Queries) GetTripMembers(ctx context.Context, tripID uuid.UUID) ([]GetTr
 			&i.ID,
 			&i.Name,
 			&i.Email,
+			&i.UpdatedAt,
 			&i.MemberStatus,
 		); err != nil {
 			return nil, err
@@ -104,7 +107,8 @@ UPDATE
 SET
     member_status = $1,
     removed_by = $2,
-    removed_at = $3
+    removed_at = $3,
+    updated_at = CURRENT_TIMESTAMP
 WHERE
     trip_id = $4
     AND user_id = $5
