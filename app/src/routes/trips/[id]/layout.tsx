@@ -1,6 +1,7 @@
 import { routeAction$, routeLoader$, z, zod$ } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
 import { getTripByIdResponseSchema } from "~/types/api";
+import { memberStatusEnum } from "~/types/members";
 import type { InitialValues } from "@modular-forms/qwik";
 import type { AddMemberForm } from "./Members";
 
@@ -31,6 +32,28 @@ export const useInviteUser = routeAction$(async (data, requestEvent) => {
   if (!response.ok) {
     return requestEvent.fail(500, {
       error: "Failed to invite user",
+    });
+  }
+
+  return response.ok;
+}, zod$(inviteUserInputSchema));
+
+export const useCancelInviteUser = routeAction$(async (data, requestEvent) => {
+  const response = await serverFetch(
+    `/trip/${data.tripID}/members`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        user_id: data.userID,
+        member_status: memberStatusEnum.Values.cancelled,
+      }),
+    },
+    requestEvent,
+  );
+
+  if (!response.ok) {
+    return requestEvent.fail(500, {
+      error: "Failed to cancel invite",
     });
   }
 

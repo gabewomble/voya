@@ -10,7 +10,7 @@ import {
 import { errorResponseSchema } from "~/types/server-errors";
 import { TextInput } from "~/components";
 import { mapServerErrors } from "~/helpers/map-server-errors";
-import { type User } from "~/types/user";
+import { type User } from "~/types/users";
 
 const updateProfileFormSchema = z.object({
   username: z

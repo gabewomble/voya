@@ -8,6 +8,7 @@ import { Page } from "~/components";
 import { authenticate } from "~/middleware/auth";
 import { routeLoader$, type RequestHandler } from "@builder.io/qwik-city";
 import { UserContext } from "~/context/user";
+import type { User } from "~/types/users";
 
 export const onRequest: RequestHandler = async (request) => {
   await authenticate(request);
@@ -31,7 +32,7 @@ export const onGet: RequestHandler = async ({ cacheControl, url }) => {
 
 export const useUserData = routeLoader$(async (request) => {
   const user = request.sharedMap.get("user");
-  return user;
+  return user as User | null;
 });
 
 export default component$(() => {

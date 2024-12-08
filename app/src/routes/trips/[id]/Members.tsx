@@ -5,7 +5,7 @@ import { server$, z } from "@builder.io/qwik-city";
 import { isServer } from "@builder.io/qwik/build";
 import { serverFetch } from "~/helpers/server-fetch";
 import { searchUsersResponseSchema } from "~/types/api";
-import type { User } from "~/types/user";
+import type { User } from "~/types/users";
 import { MembersTable } from "./MembersTable";
 import { UserSuggestionsTable } from "./UserSuggestionsTable";
 
@@ -54,7 +54,7 @@ const searchUsers = server$(async function (input: SearchUserInput) {
 });
 
 export const Members = component$(() => {
-  const { trip } = useTripData().value;
+  const { members, trip } = useTripData().value;
 
   const userSearch = useSignal("");
   const searchTimeoutId = useSignal<number>();
@@ -97,9 +97,13 @@ export const Members = component$(() => {
         placeholder="Enter username, name, or email"
         bind:value={userSearch}
       />
-      <UserSuggestionsTable userSuggestions={userSuggestions} />
+      <UserSuggestionsTable
+        trip={trip}
+        members={members}
+        userSuggestions={userSuggestions}
+      />
       <div class="divider" />
-      <MembersTable />
+      <MembersTable trip={trip} members={members} />
     </Card>
   );
 });

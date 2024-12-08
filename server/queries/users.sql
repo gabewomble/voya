@@ -164,13 +164,15 @@ SELECT
 FROM
     users u
 WHERE
-    u.id NOT IN (
+    NOT EXISTS (
         SELECT
-            user_id
+            1
         FROM
-            trip_members
+            trip_members tm
         WHERE
-            trip_id = @trip_id
+            tm.trip_id = @trip_id
+            AND tm.user_id = u.id
+            AND tm.member_status IN ('accepted', 'owner', 'pending')
     )
     AND (
         u.name ILIKE '%' || @identifier || '%'

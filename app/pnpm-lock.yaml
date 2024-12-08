@@ -17,6 +17,9 @@ importers:
       '@modular-forms/qwik':
         specifier: ^0.28.2
         version: 0.28.2(@builder.io/qwik-city@1.9.1(@types/node@20.14.11)(acorn@8.13.0)(rollup@4.24.0)(typescript@5.4.5))(@builder.io/qwik@1.9.1(@types/node@20.14.11))(typescript@5.4.5)
+      '@qwikest/icons':
+        specifier: ^0.0.13
+        version: 0.0.13(@builder.io/qwik@1.9.1(@types/node@20.14.11))
       '@types/eslint':
         specifier: 8.56.10
         version: 8.56.10
@@ -404,6 +407,12 @@ packages:
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
+
+  '@qwikest/icons@0.0.13':
+    resolution: {integrity: sha512-e0wY8vmx0nDSUiuCATlk+ojTvdBV4txIGHHWjZW5SRkv4XB8H9+3WSDcLPz0ItUdRyzcrohE9k2jtQI/98aRPA==}
+    engines: {node: '>=15.0.0'}
+    peerDependencies:
+      '@builder.io/qwik': '>=1.0.0'
 
   '@rollup/pluginutils@5.1.2':
     resolution: {integrity: sha512-/FIdS3PyZ39bjZlwqFnWqCOVnW7o963LtKMwQOD0NhQqw22gSr2YY1afu3FxRip4ZCZNsD5jq6Aaz6QV3D/Njw==}
@@ -2436,6 +2445,10 @@ snapshots:
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
+
+  '@qwikest/icons@0.0.13(@builder.io/qwik@1.9.1(@types/node@20.14.11))':
+    dependencies:
+      '@builder.io/qwik': 1.9.1(@types/node@20.14.11)
 
   '@rollup/pluginutils@5.1.2(rollup@4.24.0)':
     dependencies:

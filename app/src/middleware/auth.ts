@@ -1,6 +1,6 @@
 import type { RequestHandler } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
-import { userSchema } from "~/types/user";
+import { userSchema } from "~/types/users";
 
 export const authenticate: RequestHandler = async (requestEvent) => {
   const token = requestEvent.cookie.get("token")?.value;
