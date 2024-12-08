@@ -59,6 +59,66 @@ func (ns NullMemberStatusEnum) Value() (driver.Value, error) {
 	return string(ns.MemberStatusEnum), nil
 }
 
+type NotificationType string
+
+const (
+	NotificationTypeTripCancelled         NotificationType = "trip_cancelled"
+	NotificationTypeTripDateChange        NotificationType = "trip_date_change"
+	NotificationTypeTripInvitePending     NotificationType = "trip_invite_pending"
+	NotificationTypeTripInviteAccepted    NotificationType = "trip_invite_accepted"
+	NotificationTypeTripInviteCancelled   NotificationType = "trip_invite_cancelled"
+	NotificationTypeTripInviteDeclined    NotificationType = "trip_invite_declined"
+	NotificationTypeTripMemberLeft        NotificationType = "trip_member_left"
+	NotificationTypeTripMemberRemoved     NotificationType = "trip_member_removed"
+	NotificationTypeTripOwnershipTransfer NotificationType = "trip_ownership_transfer"
+)
+
+func (e *NotificationType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = NotificationType(s)
+	case string:
+		*e = NotificationType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for NotificationType: %T", src)
+	}
+	return nil
+}
+
+type NullNotificationType struct {
+	NotificationType NotificationType `json:"notification_type"`
+	Valid            bool             `json:"valid"` // Valid is true if NotificationType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullNotificationType) Scan(value interface{}) error {
+	if value == nil {
+		ns.NotificationType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.NotificationType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullNotificationType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.NotificationType), nil
+}
+
+type Notification struct {
+	ID        uuid.UUID        `json:"id"`
+	UserID    uuid.UUID        `json:"user_id"`
+	TripID    uuid.UUID        `json:"trip_id"`
+	Type      NotificationType `json:"type"`
+	Message   string           `json:"message"`
+	CreatedAt time.Time        `json:"created_at"`
+	ReadAt    time.Time        `json:"read_at"`
+	Metadata  []byte           `json:"metadata"`
+}
+
 type Token struct {
 	Hash         []byte    `json:"hash"`
 	UserID       uuid.UUID `json:"user_id"`

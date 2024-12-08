@@ -36,6 +36,47 @@ func (q *Queries) AddUserToTrip(ctx context.Context, arg AddUserToTripParams) er
 	return err
 }
 
+const getTripMember = `-- name: GetTripMember :one
+SELECT
+    u.id,
+    u.name,
+    u.email,
+    tm.updated_at,
+    tm.member_status
+FROM
+    users u
+    INNER JOIN trip_members tm ON u.id = tm.user_id
+WHERE
+    tm.trip_id = $1
+    AND tm.user_id = $2
+`
+
+type GetTripMemberParams struct {
+	TripID uuid.UUID `json:"trip_id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+type GetTripMemberRow struct {
+	ID           uuid.UUID        `json:"id"`
+	Name         string           `json:"name"`
+	Email        string           `json:"email"`
+	UpdatedAt    time.Time        `json:"updated_at"`
+	MemberStatus MemberStatusEnum `json:"member_status"`
+}
+
+func (q *Queries) GetTripMember(ctx context.Context, arg GetTripMemberParams) (GetTripMemberRow, error) {
+	row := q.db.QueryRow(ctx, getTripMember, arg.TripID, arg.UserID)
+	var i GetTripMemberRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.UpdatedAt,
+		&i.MemberStatus,
+	)
+	return i, err
+}
+
 const getTripMembers = `-- name: GetTripMembers :many
 SELECT
     u.id,
@@ -82,6 +123,42 @@ func (q *Queries) GetTripMembers(ctx context.Context, tripID uuid.UUID) ([]GetTr
 		return nil, err
 	}
 	return items, nil
+}
+
+const getTripOwner = `-- name: GetTripOwner :one
+SELECT
+    u.id,
+    u.name,
+    u.email,
+    tm.updated_at,
+    tm.member_status
+FROM
+    users u
+    INNER JOIN trip_members tm ON u.id = tm.user_id
+WHERE
+    tm.trip_id = $1
+    AND tm.member_status = 'owner'
+`
+
+type GetTripOwnerRow struct {
+	ID           uuid.UUID        `json:"id"`
+	Name         string           `json:"name"`
+	Email        string           `json:"email"`
+	UpdatedAt    time.Time        `json:"updated_at"`
+	MemberStatus MemberStatusEnum `json:"member_status"`
+}
+
+func (q *Queries) GetTripOwner(ctx context.Context, tripID uuid.UUID) (GetTripOwnerRow, error) {
+	row := q.db.QueryRow(ctx, getTripOwner, tripID)
+	var i GetTripOwnerRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.UpdatedAt,
+		&i.MemberStatus,
+	)
+	return i, err
 }
 
 const insertTripOwner = `-- name: InsertTripOwner :exec

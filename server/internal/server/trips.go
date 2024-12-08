@@ -147,3 +147,30 @@ func (s *Server) deleteTripByIdHandler(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+var (
+	ErrInvalidTripID = errors.New("invalid trip id")
+	ErrTripNotFound  = errors.New("trip not found")
+	ErrUserNotFound  = errors.New("user not found")
+)
+
+func (s *Server) validateTripAccess(c *gin.Context, tripID uuid.UUID, userID uuid.UUID) error {
+    _, err := s.db.Queries().GetTripById(c, repository.GetTripByIdParams{
+        ID:     tripID,
+        UserID: userID,
+    })
+    if err != nil {
+        s.log.LogError(c, "validateTripAccess: GetTripById failed", err)
+        return ErrTripNotFound
+    }
+    return nil
+}
+
+func (s *Server) validateUser(c *gin.Context, userID uuid.UUID) error {
+    _, err := s.db.Queries().GetUserById(c, userID)
+    if err != nil {
+        s.log.LogError(c, "validateUser: GetUserById failed", err)
+        return ErrUserNotFound
+    }
+    return nil
+}

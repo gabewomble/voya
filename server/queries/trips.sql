@@ -51,3 +51,14 @@ WHERE
         WHERE
             user_id = @user_id
     );
+
+-- name: CheckTripExists :one
+SELECT
+    EXISTS(
+        SELECT
+            1
+        FROM
+            trips
+        WHERE
+            id = @id
+    );

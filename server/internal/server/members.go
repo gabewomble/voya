@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"server/internal/data"
 	"server/internal/repository"
 	"server/internal/validator"
 	"time"
@@ -28,7 +29,6 @@ func (s *Server) addMemberToTripHandler(c *gin.Context) {
 		return
 	}
 
-	// TODO: Make trip & user validation reusable, copy paste easier for now
 	tripID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		s.badRequest(c, errorDetailsFromMessage("invalid trip id"))
@@ -37,37 +37,63 @@ func (s *Server) addMemberToTripHandler(c *gin.Context) {
 
 	user := s.ctxGetUser(c)
 
-	// Check tripID is valid
-	_, err = s.db.Queries().GetTripById(c, repository.GetTripByIdParams{
-		ID:     tripID,
-		UserID: user.ID,
-	})
-	if err != nil {
-		s.log.LogError(c, "addMemberToTripHandler: GetTripById failed", err)
-		s.badRequest(c, errorDetailsFromMessage("unable to add member to this trip"))
+	// Validate trip access
+	if err = s.validateTripAccess(c, tripID, user.ID); err != nil {
+		if err == ErrTripNotFound {
+			s.badRequest(c, errorDetailsFromMessage("unable to add member to this trip"))
+			return
+		}
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 
-	// Check userID is valid
-	_, err = s.db.Queries().GetUserById(c, input.UserID)
-	if err != nil {
-		s.log.LogError(c, "addMemberToTripHandler: GetUserById failed", err)
-		v.AddError("user_id", "unable to find user for user_id")
-		s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
+	// Validate target user
+	if err = s.validateUser(c, input.UserID); err != nil {
+		if err == ErrUserNotFound {
+			v.AddError("user_id", "unable to find user for user_id")
+			s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
+			return
+		}
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 
-	err = s.db.Queries().AddUserToTrip(c, repository.AddUserToTripParams{
+	tx, err := s.db.Tx(c)
+	if err != nil {
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	queries := s.db.Queries().WithTx(tx)
+
+	// Add target user to trip
+	err = queries.AddUserToTrip(c, repository.AddUserToTripParams{
 		TripID:    tripID,
 		UserID:    input.UserID,
 		InvitedBy: user.ID,
 	})
 
 	if err != nil {
+		tx.Rollback(c)
 		s.log.LogError(c, "addMemberToTripHandler: AddUserToTrip failed", err)
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
+
+	// Add notification for target user
+	err = s.handleNotifyTripInvite(c, handleNotifyTripInviteParams{
+		TripID:       tripID,
+		TargetUserID: input.UserID,
+		Queries:      queries,
+	})
+
+	if err != nil {
+		tx.Rollback(c)
+		s.log.LogError(c, "addMemberToTripHandler: handleNotifyTripInvite failed", err)
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+	}
+
+	tx.Commit(c)
 
 	c.JSON(http.StatusOK, gin.H{"message": "user invited to trip"})
 }
@@ -98,27 +124,62 @@ func (s *Server) updateTripMemberStatusHandler(c *gin.Context) {
 		return
 	}
 
-	user := s.ctxGetUser(c)
+	currentUser := s.ctxGetUser(c)
 
-	// Check tripID is valid
-	_, err = s.db.Queries().GetTripById(c, repository.GetTripByIdParams{
-		ID:     tripID,
-		UserID: user.ID,
-	})
-	if err != nil {
-		s.log.LogError(c, "updateTripMemberStatusHandler: GetTripById failed", err)
-		s.badRequest(c, errorDetailsFromMessage("unable to add member to this trip"))
+	// Validate trip access
+	if err = s.validateTripAccess(c, tripID, currentUser.ID); err != nil {
+		if err == ErrTripNotFound {
+			v.AddError("trip_id", "unable to find or access trip for trip_id")
+			s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
+			return
+		}
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}
 
-	// Check userID is valid
-	_, err = s.db.Queries().GetUserById(c, input.UserID)
+	// Validate target user
+	if err = s.validateUser(c, input.UserID); err != nil {
+		if err == ErrUserNotFound {
+			v.AddError("user_id", "unable to find user for user_id")
+			s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
+			return
+		}
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	// Get trip owner id
+	owner, err := s.db.Queries().GetTripOwner(c, tripID)
 	if err != nil {
-		s.log.LogError(c, "updateTripMemberStatusHandler: GetUserById failed", err)
-		v.AddError("user_id", "unable to find user for user_id")
+		s.log.LogError(c, "updateTripMemberStatusHandler: GetTripOwner failed", err)
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromMessage("failed to retrieve trip information"))
+		return
+	}
+
+	// Validate member status
+	data.ValidateUpdateMemberStatus(data.ValidateUpdateMemberStatusParams{
+		Validator:    v,
+		Fieldname:    "member_status",
+		UserID:       currentUser.ID,
+		TargetUserID: input.UserID,
+		MemberStatus: input.MemberStatus,
+		OwnerID:      owner.ID,
+	})
+
+	if !v.Valid() {
 		s.unprocessableEntity(c, errorDetailsFromValidator(ErrorDetailFromValidatorInput{v: v}))
 		return
 	}
+
+	tx, err := s.db.Tx(c)
+
+	if err != nil {
+		s.log.LogError(c, "updateTripMemberStatusHandler: Tx failed", err)
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	queries := s.db.Queries().WithTx(tx)
 
 	updateTripParams := repository.UpdateTripMemberStatusParams{
 		MemberStatus: input.MemberStatus,
@@ -132,8 +193,27 @@ func (s *Server) updateTripMemberStatusHandler(c *gin.Context) {
 		updateTripParams.RemovedAt = time.Now()
 	}
 
-	err = s.db.Queries().UpdateTripMemberStatus(c, updateTripParams)
+	// Update trip member status
+	err = queries.UpdateTripMemberStatus(c, updateTripParams)
 	if err != nil {
+		tx.Rollback(c)
+		s.log.LogError(c, "updateTripMemberStatusHandler: UpdateTripMemberStatus failed", err)
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	// Create notification(s)
+	err = s.handleNotifyMemberStatusUpdate(c, handleNotifyMemberStatusUpdateParams{
+		TripID:       tripID,
+		TargetUserID: input.UserID,
+		OwnerID:      owner.ID,
+		MemberStatus: input.MemberStatus,
+		Queries:      queries,
+	})
+
+	if err != nil {
+		tx.Rollback(c)
+		s.log.LogError(c, "updateTripMemberStatusHandler: handleNotifyMemberStatusUpdate failed", err)
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
 		return
 	}

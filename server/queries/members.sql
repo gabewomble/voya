@@ -40,3 +40,31 @@ FROM
     INNER JOIN trip_members tm ON u.id = tm.user_id
 WHERE
     tm.trip_id = @trip_id;
+
+-- name: GetTripMember :one
+SELECT
+    u.id,
+    u.name,
+    u.email,
+    tm.updated_at,
+    tm.member_status
+FROM
+    users u
+    INNER JOIN trip_members tm ON u.id = tm.user_id
+WHERE
+    tm.trip_id = @trip_id
+    AND tm.user_id = @user_id;
+
+-- name: GetTripOwner :one
+SELECT
+    u.id,
+    u.name,
+    u.email,
+    tm.updated_at,
+    tm.member_status
+FROM
+    users u
+    INNER JOIN trip_members tm ON u.id = tm.user_id
+WHERE
+    tm.trip_id = @trip_id
+    AND tm.member_status = 'owner';

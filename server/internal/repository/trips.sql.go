@@ -12,6 +12,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkTripExists = `-- name: CheckTripExists :one
+SELECT
+    EXISTS(
+        SELECT
+            1
+        FROM
+            trips
+        WHERE
+            id = $1
+    )
+`
+
+func (q *Queries) CheckTripExists(ctx context.Context, id uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, checkTripExists, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const deleteTripById = `-- name: DeleteTripById :exec
 DELETE FROM
     trips
