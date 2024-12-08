@@ -6,6 +6,8 @@ import { isServer } from "@builder.io/qwik/build";
 import { serverFetch } from "~/helpers/server-fetch";
 import { searchUsersResponseSchema } from "~/types/api";
 import type { User } from "~/types/user";
+import { MembersTable } from "./MembersTable";
+import { UserSuggestionsTable } from "./UserSuggestionsTable";
 
 const addMemberFormSchema = z.object({
   identifier: z
@@ -22,7 +24,7 @@ const searchUsersInputSchema = z.object({
 
 type SearchUserInput = z.infer<typeof searchUsersInputSchema>;
 
-export const searchUsers = server$(async function (input: SearchUserInput) {
+const searchUsers = server$(async function (input: SearchUserInput) {
   if (!searchUsersInputSchema.safeParse(input).success) {
     return [];
   }
@@ -52,7 +54,7 @@ export const searchUsers = server$(async function (input: SearchUserInput) {
 });
 
 export const Members = component$(() => {
-  const { trip, members } = useTripData().value;
+  const { trip } = useTripData().value;
 
   const userSearch = useSignal("");
   const searchTimeoutId = useSignal<number>();
@@ -95,57 +97,9 @@ export const Members = component$(() => {
         placeholder="Enter username, name, or email"
         bind:value={userSearch}
       />
-      {userSuggestions.value.length > 0 && (
-        <table class="table">
-          <caption>Search results</caption>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {userSuggestions.value.map((user) => (
-              <tr key={user.id}>
-                <td>{user.name}</td>
-                <td>{user.email}</td>
-                <td>
-                  <button class="btn btn-primary btn-sm" type="button">
-                    Add
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <UserSuggestionsTable userSuggestions={userSuggestions} />
       <div class="divider" />
-      {members.length > 0 ? (
-        <table class="table">
-          <caption>Trip Members</caption>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((user) => (
-              <tr key={user.id}>
-                <td>{user.name}</td>
-                <td>{user.email}</td>
-                <td>{user.member_status}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <div class="py-4">
-          <p>No members yet.</p>
-        </div>
-      )}
+      <MembersTable />
     </Card>
   );
 });
