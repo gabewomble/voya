@@ -1,5 +1,7 @@
 package server
 
+import "strconv"
+
 func (s *Server) background(fn func()) {
 	s.wg.Add(1)
 
@@ -14,4 +16,13 @@ func (s *Server) background(fn func()) {
 
 		fn()
 	}()
+}
+
+func parseStringToInt32(s string, defaultValue int32) int32 {
+	i, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		return defaultValue
+	}
+
+	return int32(i)
 }

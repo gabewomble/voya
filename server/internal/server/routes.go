@@ -31,21 +31,30 @@ func (s *Server) RegisterRoutes() http.Handler {
 		// Users
 		// Hate that I can't have both /users/search and /users/:username
 		// -1 for Gin
-		protected.GET("/users/u/:username", s.getUserByUsernameHandler)
-		protected.PATCH("/users/u/:username", s.updateUserProfileHandler)
+		protected.GET("/user/:username", s.getUserByUsernameHandler)
+		protected.PATCH("/user/:username", s.updateUserProfileHandler)
 		protected.POST("/users/search", s.searchUsersHandler)
 
 		// Trips
 		protected.GET("/trips", s.listTripsHandler)
 		protected.POST("/trips", s.createTripHandler)
-		protected.GET("/trips/t/:id", s.getTripByIdHandler)
-		protected.DELETE("/trips/t/:id", s.deleteTripByIdHandler)
+		protected.GET("/trip/:id", s.getTripByIdHandler)
+		protected.DELETE("/trip/:id", s.deleteTripByIdHandler)
 
 		// Gin doesn't correctly parse parameters, so it considers /memberes as part of the :id
 		// -1 for Gin
 		// Trip Members
-		protected.POST("/trips/m/:id", s.addMemberToTripHandler)
-		protected.PATCH("/trips/m/:id", s.updateTripMemberStatusHandler)
+		protected.POST("/trip/:id/members", s.addMemberToTripHandler)
+		protected.PATCH("/trip/:id/members", s.updateTripMemberStatusHandler)
+
+		// Notifications
+		protected.GET("/notification/:id", s.getNotificationByIdHandler)
+		protected.POST("/notification/:id/read", s.markNotificationAsReadHandler)
+		protected.DELETE("/notification/:id", s.deleteNotificationHandler)
+		protected.GET("/notifications", s.listNotificationsHandler)
+		protected.GET("/notifications/unread", s.listUnreadNotificationsHandler)
+		protected.GET("/notifications/unread/count", s.countUnreadNotificationsHandler)
+		protected.POST("/notifications/read", s.markNotificationsAsReadHandler)
 	}
 
 	return r

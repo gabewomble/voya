@@ -1,12 +1,173 @@
 package server
 
 import (
-	"encoding/json"
+	"net/http"
+	"server/internal/dbtypes"
 	"server/internal/repository"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
+
+func (s *Server) listNotificationsHandler(c *gin.Context) {
+	user := s.ctxGetUser(c)
+	limit := parseStringToInt32(c.DefaultQuery("limit", "10"), 10)
+	offset := parseStringToInt32(c.DefaultQuery("offset", "0"), 0)
+
+	notifications, err := s.db.Queries().ListNotifications(c, repository.ListNotificationsParams{
+		UserID:             user.ID,
+		NotificationLimit:  limit,
+		NotificationOffset: offset,
+	})
+
+	if notifications == nil {
+		notifications = make([]repository.ListNotificationsRow, 0)
+	}
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(200, gin.H{"notifications": notifications, "total": 0})
+			return
+		}
+		s.log.LogError(c, "listNotificationsHandler: ListNotifications failed", err)
+		c.JSON(500, gin.H{"error": "Failed to list notifications"})
+		return
+	}
+
+	c.JSON(200, gin.H{"notifications": notifications, "total": len(notifications)})
+}
+
+func (s *Server) listUnreadNotificationsHandler(c *gin.Context) {
+	user := s.ctxGetUser(c)
+
+	notifications, err := s.db.Queries().GetUnreadNotifications(c, user.ID)
+
+	if notifications == nil {
+		notifications = make([]repository.GetUnreadNotificationsRow, 0)
+	}
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(200, gin.H{"notifications": notifications, "total": 0})
+			return
+		}
+		s.log.LogError(c, "listUnreadNotificationsHandler: ListUnreadNotifications failed", err)
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromMessage("Failed to list unread notifications"))
+		return
+	}
+
+	c.JSON(200, gin.H{"notifications": notifications, "total": len(notifications)})
+}
+
+func (s *Server) countUnreadNotificationsHandler(c *gin.Context) {
+	user := s.ctxGetUser(c)
+
+	count, err := s.db.Queries().CountUnreadNotifications(c, user.ID)
+
+	if err != nil {
+		s.log.LogError(c, "countUnreadNotificationsHandler: CountUnreadNotifications failed", err)
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromMessage("Failed to count unread notifications"))
+		return
+	}
+
+	c.JSON(200, gin.H{"count": count})
+}
+
+func (s *Server) markNotificationsAsReadHandler(c *gin.Context) {
+	user := s.ctxGetUser(c)
+
+	err := s.db.Queries().MarkNotificationsAsRead(c, user.ID)
+
+	if err != nil {
+		s.log.LogError(c, "markNotificationsAsReadHandler: MarkNotificationsAsRead failed", err)
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromMessage("Failed to mark notifications as read"))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Notifications marked as read"})
+}
+
+func (s *Server) getNotificationByIdHandler(c *gin.Context) {
+	user := s.ctxGetUser(c)
+	notificationID, err := uuid.Parse(c.Param("id"))
+
+	if err != nil {
+		s.errorResponse(c, http.StatusBadRequest, errorDetailsFromMessage("Invalid notification ID"))
+		return
+	}
+
+	notification, err := s.db.Queries().GetNotificationById(c, repository.GetNotificationByIdParams{
+		UserID: user.ID,
+		ID:     notificationID,
+	})
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			s.errorResponse(c, http.StatusNotFound, errorDetailsFromMessage("Notification not found"))
+			return
+		}
+		s.log.LogError(c, "getNotificationByIdHandler: GetNotificationByID failed", err)
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromMessage("Failed to get notification"))
+		return
+	}
+
+	c.JSON(http.StatusOK, notification)
+}
+
+func (s *Server) markNotificationAsReadHandler(c *gin.Context) {
+	user := s.ctxGetUser(c)
+	notificationID, err := uuid.Parse(c.Param("id"))
+
+	if err != nil {
+		s.errorResponse(c, http.StatusBadRequest, errorDetailsFromMessage("Invalid notification ID"))
+		return
+	}
+
+	err = s.db.Queries().MarkNotificationAsRead(c, repository.MarkNotificationAsReadParams{
+		UserID: user.ID,
+		ID:     notificationID,
+	})
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			s.errorResponse(c, http.StatusNotFound, errorDetailsFromMessage("Notification not found"))
+			return
+		}
+		s.log.LogError(c, "markNotificationAsReadHandler: MarkNotificationAsRead failed", err)
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromMessage("Failed to mark notification as read"))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Notification marked as read"})
+}
+
+func (s *Server) deleteNotificationHandler(c *gin.Context) {
+	user := s.ctxGetUser(c)
+	notificationID, err := uuid.Parse(c.Param("id"))
+
+	if err != nil {
+		s.errorResponse(c, http.StatusBadRequest, errorDetailsFromMessage("Invalid notification ID"))
+		return
+	}
+
+	err = s.db.Queries().DeleteNotification(c, repository.DeleteNotificationParams{
+		UserID: user.ID,
+		ID:     notificationID,
+	})
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			s.errorResponse(c, http.StatusNotFound, errorDetailsFromMessage("Notification not found"))
+			return
+		}
+		s.log.LogError(c, "deleteNotificationHandler: DeleteNotification failed", err)
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromMessage("Failed to delete notification"))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Notification deleted"})
+}
 
 type handleNotifyMemberStatusUpdateParams struct {
 	TripID       uuid.UUID
@@ -47,18 +208,13 @@ func (s *Server) handleNotifyMemberStatusUpdate(c *gin.Context, params handleNot
 
 	currentUser := s.ctxGetUser(c)
 
-	metadata, err := json.Marshal(map[string]any{
-		"user_id":   currentUser.ID,
-		"user_name": currentUser.Name,
-	})
+	metadata := dbtypes.NotificationMetadata{
+		UserID:   currentUser.ID,
+		UserName: currentUser.Name,
+	}
 	insertNotificationParams.Metadata = metadata
 
-	if err != nil {
-		s.log.LogError(c, "handleNotifyMemberStatusUpdate: json.Marshal failed", err)
-		return err
-	}
-
-	err = params.Queries.InsertNotification(c, insertNotificationParams)
+	err := params.Queries.InsertNotification(c, insertNotificationParams)
 
 	if err != nil {
 		s.log.LogError(c, "handleNotifyMemberStatusUpdate: InsertNotification failed", err)
@@ -76,22 +232,15 @@ type handleNotifyTripInviteParams struct {
 func (s *Server) handleNotifyTripInvite(c *gin.Context, params handleNotifyTripInviteParams) error {
 	currentUser := s.ctxGetUser(c)
 
-	metadata, err := json.Marshal(map[string]any{
-		"user_id":   currentUser.ID,
-		"user_name": currentUser.Name,
-	})
-
-	if err != nil {
-		s.log.LogError(c, "handleNotifyTripInvite: json.Marshal failed", err)
-		return err
-	}
-
-	err = params.Queries.InsertNotification(c, repository.InsertNotificationParams{
-		UserID:   params.TargetUserID,
-		Type:     repository.NotificationTypeTripInvitePending,
-		TripID:   params.TripID,
-		Message:  "You have been invited to a trip",
-		Metadata: metadata,
+	err := params.Queries.InsertNotification(c, repository.InsertNotificationParams{
+		UserID:  params.TargetUserID,
+		Type:    repository.NotificationTypeTripInvitePending,
+		TripID:  params.TripID,
+		Message: "You have been invited to a trip",
+		Metadata: dbtypes.NotificationMetadata{
+			UserID:   currentUser.ID,
+			UserName: currentUser.Name,
+		},
 	})
 
 	if err != nil {

@@ -32,10 +32,11 @@ func (s *Server) authenticate() gin.HandlerFunc {
 
 		tokenHash := data.GetTokenHash(token)
 
+		expiry := time.Now()
 		user, err := s.db.Queries().GetUserForToken(c, repository.GetUserForTokenParams{
 			TokenHash:   tokenHash[:],
 			TokenScope:  data.TokenScope.Authentication,
-			TokenExpiry: time.Now(),
+			TokenExpiry: &expiry,
 		})
 
 		if err != nil {

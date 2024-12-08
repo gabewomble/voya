@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"server/internal/dbtypes"
 )
 
 const countUnreadNotifications = `-- name: CountUnreadNotifications :one
@@ -70,14 +71,14 @@ type GetNotificationByIdParams struct {
 }
 
 type GetNotificationByIdRow struct {
-	ID        uuid.UUID        `json:"id"`
-	UserID    uuid.UUID        `json:"user_id"`
-	TripID    uuid.UUID        `json:"trip_id"`
-	Message   string           `json:"message"`
-	Type      NotificationType `json:"type"`
-	CreatedAt time.Time        `json:"created_at"`
-	ReadAt    time.Time        `json:"read_at"`
-	Metadata  []byte           `json:"metadata"`
+	ID        uuid.UUID                    `json:"id"`
+	UserID    uuid.UUID                    `json:"user_id"`
+	TripID    uuid.UUID                    `json:"trip_id"`
+	Message   string                       `json:"message"`
+	Type      NotificationType             `json:"type"`
+	CreatedAt *time.Time                   `json:"created_at"`
+	ReadAt    *time.Time                   `json:"read_at"`
+	Metadata  dbtypes.NotificationMetadata `json:"metadata"`
 }
 
 func (q *Queries) GetNotificationById(ctx context.Context, arg GetNotificationByIdParams) (GetNotificationByIdRow, error) {
@@ -116,14 +117,14 @@ ORDER BY
 `
 
 type GetUnreadNotificationsRow struct {
-	ID        uuid.UUID        `json:"id"`
-	UserID    uuid.UUID        `json:"user_id"`
-	TripID    uuid.UUID        `json:"trip_id"`
-	Message   string           `json:"message"`
-	Type      NotificationType `json:"type"`
-	CreatedAt time.Time        `json:"created_at"`
-	ReadAt    time.Time        `json:"read_at"`
-	Metadata  []byte           `json:"metadata"`
+	ID        uuid.UUID                    `json:"id"`
+	UserID    uuid.UUID                    `json:"user_id"`
+	TripID    uuid.UUID                    `json:"trip_id"`
+	Message   string                       `json:"message"`
+	Type      NotificationType             `json:"type"`
+	CreatedAt *time.Time                   `json:"created_at"`
+	ReadAt    *time.Time                   `json:"read_at"`
+	Metadata  dbtypes.NotificationMetadata `json:"metadata"`
 }
 
 func (q *Queries) GetUnreadNotifications(ctx context.Context, userID uuid.UUID) ([]GetUnreadNotificationsRow, error) {
@@ -163,11 +164,11 @@ VALUES
 `
 
 type InsertNotificationParams struct {
-	UserID   uuid.UUID        `json:"user_id"`
-	TripID   uuid.UUID        `json:"trip_id"`
-	Message  string           `json:"message"`
-	Type     NotificationType `json:"type"`
-	Metadata []byte           `json:"metadata"`
+	UserID   uuid.UUID                    `json:"user_id"`
+	TripID   uuid.UUID                    `json:"trip_id"`
+	Message  string                       `json:"message"`
+	Type     NotificationType             `json:"type"`
+	Metadata dbtypes.NotificationMetadata `json:"metadata"`
 }
 
 func (q *Queries) InsertNotification(ctx context.Context, arg InsertNotificationParams) error {
@@ -208,14 +209,14 @@ type ListNotificationsParams struct {
 }
 
 type ListNotificationsRow struct {
-	ID        uuid.UUID        `json:"id"`
-	UserID    uuid.UUID        `json:"user_id"`
-	TripID    uuid.UUID        `json:"trip_id"`
-	Message   string           `json:"message"`
-	Type      NotificationType `json:"type"`
-	CreatedAt time.Time        `json:"created_at"`
-	ReadAt    time.Time        `json:"read_at"`
-	Metadata  []byte           `json:"metadata"`
+	ID        uuid.UUID                    `json:"id"`
+	UserID    uuid.UUID                    `json:"user_id"`
+	TripID    uuid.UUID                    `json:"trip_id"`
+	Message   string                       `json:"message"`
+	Type      NotificationType             `json:"type"`
+	CreatedAt *time.Time                   `json:"created_at"`
+	ReadAt    *time.Time                   `json:"read_at"`
+	Metadata  dbtypes.NotificationMetadata `json:"metadata"`
 }
 
 func (q *Queries) ListNotifications(ctx context.Context, arg ListNotificationsParams) ([]ListNotificationsRow, error) {
@@ -264,5 +265,20 @@ type MarkNotificationAsReadParams struct {
 
 func (q *Queries) MarkNotificationAsRead(ctx context.Context, arg MarkNotificationAsReadParams) error {
 	_, err := q.db.Exec(ctx, markNotificationAsRead, arg.ID, arg.UserID)
+	return err
+}
+
+const markNotificationsAsRead = `-- name: MarkNotificationsAsRead :exec
+UPDATE
+    notifications
+SET
+    read_at = NOW()
+WHERE
+    user_id = $1
+    AND read_at IS NULL
+`
+
+func (q *Queries) MarkNotificationsAsRead(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, markNotificationsAsRead, userID)
 	return err
 }
