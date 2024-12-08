@@ -83,6 +83,13 @@ db/migrations/down: confirm
 	@echo 'Running down migrations...'
 	migrate -path ./migrations -database postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/${DB_DATABASE} down
 
+
+## db/seed: apply all up database migrations
+.PHONY: db/seed
+db/seed:
+	@echo 'Seeding database...'
+	psql postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/${DB_DATABASE} -f ./seed/users.sql
+
 # ==================================================================================== #
 # BUILD
 # ==================================================================================== #

@@ -21,8 +21,8 @@ UPDATE
 SET
     invited_by = EXCLUDED.invited_by,
     member_status = 'pending',
-    removed_by = NULL,
-    removed_at = NULL
+    updated_by = EXCLUDED.updated_by,
+    updated_at = CURRENT_TIMESTAMP
 `
 
 type AddUserToTripParams struct {
@@ -36,31 +36,205 @@ func (q *Queries) AddUserToTrip(ctx context.Context, arg AddUserToTripParams) er
 	return err
 }
 
+const checkUserIsTripMember = `-- name: CheckUserIsTripMember :one
+SELECT
+    EXISTS(
+        SELECT
+            1
+        FROM
+            trip_members
+        WHERE
+            trip_id = $1
+            AND user_id = $2
+    )
+`
+
+type CheckUserIsTripMemberParams struct {
+	TripID uuid.UUID `json:"trip_id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) CheckUserIsTripMember(ctx context.Context, arg CheckUserIsTripMemberParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUserIsTripMember, arg.TripID, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const getTripMember = `-- name: GetTripMember :one
+SELECT
+    u.id,
+    u.name,
+    u.email,
+    tm.updated_by,
+    tm.updated_at,
+    tm.member_status
+FROM
+    users u
+    INNER JOIN trip_members tm ON u.id = tm.user_id
+WHERE
+    tm.trip_id = $1
+    AND tm.user_id = $2
+`
+
+type GetTripMemberParams struct {
+	TripID uuid.UUID `json:"trip_id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+type GetTripMemberRow struct {
+	ID           uuid.UUID        `json:"id"`
+	Name         string           `json:"name"`
+	Email        string           `json:"email"`
+	UpdatedBy    uuid.UUID        `json:"updated_by"`
+	UpdatedAt    time.Time        `json:"updated_at"`
+	MemberStatus MemberStatusEnum `json:"member_status"`
+}
+
+func (q *Queries) GetTripMember(ctx context.Context, arg GetTripMemberParams) (GetTripMemberRow, error) {
+	row := q.db.QueryRow(ctx, getTripMember, arg.TripID, arg.UserID)
+	var i GetTripMemberRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.UpdatedBy,
+		&i.UpdatedAt,
+		&i.MemberStatus,
+	)
+	return i, err
+}
+
+const getTripMembers = `-- name: GetTripMembers :many
+SELECT
+    u.id,
+    u.name,
+    u.email,
+    tm.updated_by,
+    tm.updated_at,
+    tm.member_status
+FROM
+    users u
+    INNER JOIN trip_members tm ON u.id = tm.user_id
+WHERE
+    tm.trip_id = $1
+`
+
+type GetTripMembersRow struct {
+	ID           uuid.UUID        `json:"id"`
+	Name         string           `json:"name"`
+	Email        string           `json:"email"`
+	UpdatedBy    uuid.UUID        `json:"updated_by"`
+	UpdatedAt    time.Time        `json:"updated_at"`
+	MemberStatus MemberStatusEnum `json:"member_status"`
+}
+
+func (q *Queries) GetTripMembers(ctx context.Context, tripID uuid.UUID) ([]GetTripMembersRow, error) {
+	rows, err := q.db.Query(ctx, getTripMembers, tripID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTripMembersRow
+	for rows.Next() {
+		var i GetTripMembersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.UpdatedBy,
+			&i.UpdatedAt,
+			&i.MemberStatus,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTripOwner = `-- name: GetTripOwner :one
+SELECT
+    u.id,
+    u.name,
+    u.email,
+    tm.updated_by,
+    tm.updated_at,
+    tm.member_status
+FROM
+    users u
+    INNER JOIN trip_members tm ON u.id = tm.user_id
+WHERE
+    tm.trip_id = $1
+    AND tm.member_status = 'owner'
+`
+
+type GetTripOwnerRow struct {
+	ID           uuid.UUID        `json:"id"`
+	Name         string           `json:"name"`
+	Email        string           `json:"email"`
+	UpdatedBy    uuid.UUID        `json:"updated_by"`
+	UpdatedAt    time.Time        `json:"updated_at"`
+	MemberStatus MemberStatusEnum `json:"member_status"`
+}
+
+func (q *Queries) GetTripOwner(ctx context.Context, tripID uuid.UUID) (GetTripOwnerRow, error) {
+	row := q.db.QueryRow(ctx, getTripOwner, tripID)
+	var i GetTripOwnerRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.UpdatedBy,
+		&i.UpdatedAt,
+		&i.MemberStatus,
+	)
+	return i, err
+}
+
+const insertTripOwner = `-- name: InsertTripOwner :exec
+INSERT INTO
+    trip_members (trip_id, user_id, invited_by, member_status)
+VALUES
+    ($1, $2, NULL, 'owner')
+`
+
+type InsertTripOwnerParams struct {
+	TripID  uuid.UUID `json:"trip_id"`
+	OwnerID uuid.UUID `json:"owner_id"`
+}
+
+func (q *Queries) InsertTripOwner(ctx context.Context, arg InsertTripOwnerParams) error {
+	_, err := q.db.Exec(ctx, insertTripOwner, arg.TripID, arg.OwnerID)
+	return err
+}
+
 const updateTripMemberStatus = `-- name: UpdateTripMemberStatus :exec
 UPDATE
     trip_members
 SET
     member_status = $1,
-    removed_by = $2,
-    removed_at = $3
+    updated_by = $2,
+    updated_at = CURRENT_TIMESTAMP
 WHERE
-    trip_id = $4
-    AND user_id = $5
+    trip_id = $3
+    AND user_id = $4
 `
 
 type UpdateTripMemberStatusParams struct {
-	MemberStatus string    `json:"member_status"`
-	RemovedBy    uuid.UUID `json:"removed_by"`
-	RemovedAt    time.Time `json:"removed_at"`
-	TripID       uuid.UUID `json:"trip_id"`
-	UserID       uuid.UUID `json:"user_id"`
+	MemberStatus MemberStatusEnum `json:"member_status"`
+	UpdatedBy    uuid.UUID        `json:"updated_by"`
+	TripID       uuid.UUID        `json:"trip_id"`
+	UserID       uuid.UUID        `json:"user_id"`
 }
 
 func (q *Queries) UpdateTripMemberStatus(ctx context.Context, arg UpdateTripMemberStatusParams) error {
 	_, err := q.db.Exec(ctx, updateTripMemberStatus,
 		arg.MemberStatus,
-		arg.RemovedBy,
-		arg.RemovedAt,
+		arg.UpdatedBy,
 		arg.TripID,
 		arg.UserID,
 	)

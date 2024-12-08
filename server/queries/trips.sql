@@ -1,8 +1,8 @@
 -- name: InsertTrip :one
 INSERT INTO
-    trips (name, description, owner_id)
+    trips (name, description)
 VALUES
-    (@name, @description, @owner_id) RETURNING *;
+    (@name, @description) RETURNING *;
 
 -- name: GetTripById :one
 SELECT
@@ -12,8 +12,7 @@ FROM
 WHERE
     id = @id
     AND (
-        owner_id = @user_id
-        OR id IN (
+        id IN (
             SELECT
                 trip_id
             FROM
@@ -28,7 +27,15 @@ DELETE FROM
     trips
 WHERE
     id = @id
-    AND owner_id = @user_id;
+    AND id IN (
+        SELECT
+            trip_id
+        FROM
+            trip_members
+        WHERE
+            user_id = @user_id
+            AND member_status = 'owner'
+    );
 
 -- name: ListTrips :many
 SELECT
@@ -36,8 +43,7 @@ SELECT
 FROM
     trips
 WHERE
-    owner_id = @user_id
-    OR id IN (
+    id IN (
         SELECT
             trip_id
         FROM
@@ -46,26 +52,44 @@ WHERE
             user_id = @user_id
     );
 
--- name: AddTripMember :exec
-INSERT INTO
-    trip_members (trip_id, user_id)
-VALUES
-    (@trip_id, @user_id);
-
--- name: RemoveTripMember :exec
-DELETE FROM
-    trip_members
-WHERE
-    trip_id = @trip_id
-    AND user_id = @user_id;
-
--- name: GetTripMembers :many
+-- name: CheckUserCanViewTrip :one
 SELECT
-    u.id,
-    u.name,
-    u.email
-FROM
-    users u
-    INNER JOIN trip_members tm ON u.id = tm.user_id
-WHERE
-    tm.trip_id = @trip_id;
+    EXISTS(
+        SELECT
+            1
+        FROM
+            trips
+        WHERE
+            id = @id
+            AND id IN (
+                SELECT
+                    trip_id
+                FROM
+                    trip_members
+                WHERE
+                    user_id = @user_id
+            )
+    );
+
+-- name: CheckUserCanEditTrip :one
+SELECT
+    EXISTS(
+        SELECT
+            1
+        FROM
+            trips
+        WHERE
+            id = @id
+            AND id IN (
+                SELECT
+                    trip_id
+                FROM
+                    trip_members
+                WHERE
+                    user_id = @user_id
+                    AND (
+                        member_status = 'accepted'
+                        OR member_status = 'owner'
+                    )
+            )
+    );

@@ -42,12 +42,39 @@ func (s *Server) createTripHandler(c *gin.Context) {
 		return
 	}
 
-	input.OwnerID = s.ctxGetUser(c).ID
+	userID := s.ctxGetUser(c).ID
 
-	trip, err := s.db.Queries().InsertTrip(c, input)
-
+	tx, err := s.db.Tx(c)
 	if err != nil {
 		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	queries := s.db.Queries().WithTx(tx)
+
+	trip, err := queries.InsertTrip(c, input)
+
+	if err != nil {
+		tx.Rollback(c)
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	err = queries.InsertTripOwner(c, repository.InsertTripOwnerParams{
+		TripID:  trip.ID,
+		OwnerID: userID,
+	})
+
+	if err != nil {
+		tx.Rollback(c)
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	err = tx.Commit(c)
+	if err != nil {
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
 	}
 
 	s.log.LogInfo(c, "createTripHandler: trip created", "trip", trip)
@@ -119,4 +146,40 @@ func (s *Server) deleteTripByIdHandler(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+var (
+	ErrTripNotFound = errors.New("trip not found")
+	ErrUserNotFound = errors.New("user not found")
+)
+
+func (s *Server) validateTripAccess(c *gin.Context, tripID uuid.UUID, userID uuid.UUID) (bool, error) {
+	ok, err := s.db.Queries().CheckUserCanViewTrip(c, repository.CheckUserCanViewTripParams{
+		ID:     tripID,
+		UserID: userID,
+	})
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return false, ErrTripNotFound
+		}
+		s.log.LogError(c, "validateTripAccess: GetTripById failed", err)
+		return false, err
+	}
+
+	return ok, nil
+}
+
+func (s *Server) validateUser(c *gin.Context, userID uuid.UUID) (bool, error) {
+	ok, err := s.db.Queries().CheckUserExists(c, userID)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return false, ErrUserNotFound
+		}
+		s.log.LogError(c, "validateUser: GetUserById failed", err)
+		return false, err
+	}
+
+	return ok, nil
 }

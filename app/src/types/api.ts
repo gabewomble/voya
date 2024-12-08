@@ -2,6 +2,15 @@ import { z } from "@builder.io/qwik-city";
 import { tripSchema } from "./trips";
 import { userSchema } from "./user";
 
+const memberStatusEnum = z.enum([
+  "owner",
+  "pending",
+  "accepted",
+  "declined",
+  "removed",
+  "cancelled",
+]);
+
 export const getTripByIdResponseSchema = z.object({
   trip: tripSchema,
   members: z.array(
@@ -9,6 +18,9 @@ export const getTripByIdResponseSchema = z.object({
       id: z.string().uuid(),
       name: z.string(),
       email: z.string(),
+      member_status: memberStatusEnum,
+      updated_at: z.string().optional(),
+      updated_by: z.string().uuid().optional(),
     }),
   ),
 });
