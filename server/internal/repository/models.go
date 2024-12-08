@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"server/internal/dbtypes"
 )
 
 type MemberStatusEnum string
@@ -109,22 +110,22 @@ func (ns NullNotificationType) Value() (driver.Value, error) {
 }
 
 type Notification struct {
-	ID        uuid.UUID        `json:"id"`
-	UserID    uuid.UUID        `json:"user_id"`
-	TripID    uuid.UUID        `json:"trip_id"`
-	Type      NotificationType `json:"type"`
-	Message   string           `json:"message"`
-	CreatedAt time.Time        `json:"created_at"`
-	ReadAt    time.Time        `json:"read_at"`
-	Metadata  []byte           `json:"metadata"`
+	ID        uuid.UUID                    `json:"id"`
+	UserID    uuid.UUID                    `json:"user_id"`
+	TripID    uuid.UUID                    `json:"trip_id"`
+	Type      NotificationType             `json:"type"`
+	Message   string                       `json:"message"`
+	CreatedAt *time.Time                   `json:"created_at"`
+	ReadAt    *time.Time                   `json:"read_at"`
+	Metadata  dbtypes.NotificationMetadata `json:"metadata"`
 }
 
 type Token struct {
-	Hash         []byte    `json:"hash"`
-	UserID       uuid.UUID `json:"user_id"`
-	Expiry       time.Time `json:"expiry"`
-	Scope        string    `json:"scope"`
-	RefreshToken []byte    `json:"refresh_token"`
+	Hash         []byte     `json:"hash"`
+	UserID       uuid.UUID  `json:"user_id"`
+	Expiry       *time.Time `json:"expiry"`
+	Scope        string     `json:"scope"`
+	RefreshToken []byte     `json:"refresh_token"`
 }
 
 type Trip struct {
@@ -133,8 +134,8 @@ type Trip struct {
 	Description pgtype.Text `json:"description"`
 	StartDate   pgtype.Date `json:"start_date"`
 	EndDate     pgtype.Date `json:"end_date"`
-	CreatedAt   time.Time   `json:"created_at"`
-	UpdatedAt   time.Time   `json:"updated_at"`
+	CreatedAt   *time.Time  `json:"created_at"`
+	UpdatedAt   *time.Time  `json:"updated_at"`
 }
 
 type TripMember struct {
@@ -143,16 +144,16 @@ type TripMember struct {
 	InvitedBy    uuid.UUID        `json:"invited_by"`
 	MemberStatus MemberStatusEnum `json:"member_status"`
 	UpdatedBy    uuid.UUID        `json:"updated_by"`
-	UpdatedAt    time.Time        `json:"updated_at"`
+	UpdatedAt    *time.Time       `json:"updated_at"`
 }
 
 type User struct {
-	ID           uuid.UUID `json:"id"`
-	CreatedAt    time.Time `json:"created_at"`
-	Name         string    `json:"name"`
-	Email        string    `json:"email"`
-	PasswordHash []byte    `json:"password_hash"`
-	Activated    bool      `json:"activated"`
-	Version      int32     `json:"version"`
-	Username     string    `json:"username"`
+	ID           uuid.UUID  `json:"id"`
+	CreatedAt    *time.Time `json:"created_at"`
+	Name         string     `json:"name"`
+	Email        string     `json:"email"`
+	PasswordHash []byte     `json:"password_hash"`
+	Activated    bool       `json:"activated"`
+	Version      int32      `json:"version"`
+	Username     string     `json:"username"`
 }

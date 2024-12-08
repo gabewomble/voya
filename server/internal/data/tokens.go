@@ -41,10 +41,11 @@ type Token struct {
 }
 
 func (t Token) New(userId uuid.UUID, ttl time.Duration, scope string) (*Token, error) {
+	expiry := time.Now().Add(ttl)
 	token := &Token{
 		Model: repository.Token{
 			UserID: userId,
-			Expiry: time.Now().Add(ttl),
+			Expiry: &expiry,
 			Scope:  scope,
 		},
 	}

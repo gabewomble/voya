@@ -124,13 +124,13 @@ func (s *Server) registerUserHandler(c *gin.Context) {
 }
 
 type cleanUser struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	Activated bool      `json:"activated"`
-	Version   int32     `json:"version"`
-	Username  string    `json:"username"`
+	ID        uuid.UUID  `json:"id"`
+	CreatedAt *time.Time `json:"created_at"`
+	Name      string     `json:"name"`
+	Email     string     `json:"email"`
+	Activated bool       `json:"activated"`
+	Version   int32      `json:"version"`
+	Username  string     `json:"username"`
 }
 
 func sanitizeUser(u *repository.User) cleanUser {
@@ -191,10 +191,11 @@ func (s *Server) activateUserHandler(c *gin.Context) {
 
 	// Find user from activation token
 	tokenHash := data.GetTokenHash(input.Token)
+	expiry := time.Now()
 	user, err := s.db.Queries().GetUserForToken(c, repository.GetUserForTokenParams{
 		TokenHash:   tokenHash[:],
 		TokenScope:  data.TokenScope.Activation,
-		TokenExpiry: time.Now(),
+		TokenExpiry: &expiry,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

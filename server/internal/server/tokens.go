@@ -92,10 +92,11 @@ func (s *Server) refreshAuthTokenHandler(c *gin.Context) {
 	}
 
 	refreshHash := data.GetTokenHash(input.RefreshToken)
+	expiry := time.Now()
 	user, err := s.db.Queries().GetUserForRefreshToken(c, repository.GetUserForRefreshTokenParams{
 		RefreshToken: refreshHash[:],
 		TokenScope:   data.TokenScope.Authentication,
-		TokenExpiry:  time.Now(),
+		TokenExpiry:  &expiry,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

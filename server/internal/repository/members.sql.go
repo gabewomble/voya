@@ -87,7 +87,7 @@ type GetTripMemberRow struct {
 	Name         string           `json:"name"`
 	Email        string           `json:"email"`
 	UpdatedBy    uuid.UUID        `json:"updated_by"`
-	UpdatedAt    time.Time        `json:"updated_at"`
+	UpdatedAt    *time.Time       `json:"updated_at"`
 	MemberStatus MemberStatusEnum `json:"member_status"`
 }
 
@@ -125,7 +125,7 @@ type GetTripMembersRow struct {
 	Name         string           `json:"name"`
 	Email        string           `json:"email"`
 	UpdatedBy    uuid.UUID        `json:"updated_by"`
-	UpdatedAt    time.Time        `json:"updated_at"`
+	UpdatedAt    *time.Time       `json:"updated_at"`
 	MemberStatus MemberStatusEnum `json:"member_status"`
 }
 
@@ -177,7 +177,7 @@ type GetTripOwnerRow struct {
 	Name         string           `json:"name"`
 	Email        string           `json:"email"`
 	UpdatedBy    uuid.UUID        `json:"updated_by"`
-	UpdatedAt    time.Time        `json:"updated_at"`
+	UpdatedAt    *time.Time       `json:"updated_at"`
 	MemberStatus MemberStatusEnum `json:"member_status"`
 }
 
