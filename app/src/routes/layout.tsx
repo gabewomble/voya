@@ -16,24 +16,26 @@ import { ActivityContext } from "~/context/activity";
 export const onRequest: RequestHandler = async (request) => {
   await authenticate(request);
 };
+// Cache-control seems to be buggy
+// const PUBLIC_ROUTES = new Set(["/", "/login", "/signup"]);
 
-const PUBLIC_ROUTES = new Set(["/", "/login", "/signup"]);
-
-export const onGet: RequestHandler = async ({ cacheControl, url }) => {
-  // Control caching for this request for best performance and to reduce hosting costs:
-  // https://qwik.dev/docs/caching/
-  if (PUBLIC_ROUTES.has(url.pathname)) {
-    cacheControl({
-      public: true,
-      // Always serve a cached response by default, up to a week stale
-      staleWhileRevalidate: 60 * 60 * 24 * 7,
-      // Max once every 5 seconds, revalidate on the server to get a fresh version of this page
-      maxAge: 5,
-    });
-  }
-};
+// export const onGet: RequestHandler = async ({ cacheControl, url }) => {
+// Control caching for this request for best performance and to reduce hosting costs:
+// https://qwik.dev/docs/caching/
+// if (PUBLIC_ROUTES.has(url.pathname)) {
+//   cacheControl({
+//     public: true,
+//     // Always serve a cached response by default, up to a week stale
+//     staleWhileRevalidate: 60 * 60 * 24 * 7,
+//     // Max once every 5 seconds, revalidate on the server to get a fresh version of this page
+//     maxAge: 5,
+//   });
+// }
+// };
 
 export const useActivityCount = routeLoader$(async (request) => {
+  if (!request.sharedMap.get("user")) return 0;
+
   const res = await serverFetch(
     "/notifications/unread/count",
     {

@@ -327,7 +327,7 @@ func (q *Queries) MarkNotificationsAsRead(ctx context.Context, userID uuid.UUID)
 	return err
 }
 
-const notifyTripMembers = `-- name: NotifyTripMembers :exec
+const notifyOtherTripMembers = `-- name: NotifyOtherTripMembers :exec
 INSERT INTO
     notifications (
         user_id,
@@ -349,9 +349,10 @@ FROM
 WHERE
     tm.trip_id = $1
     AND tm.member_status IN ('accepted', 'owner')
+    AND tm.user_id != $5
 `
 
-type NotifyTripMembersParams struct {
+type NotifyOtherTripMembersParams struct {
 	TripID       uuid.UUID        `json:"trip_id"`
 	Message      string           `json:"message"`
 	Type         NotificationType `json:"type"`
@@ -359,8 +360,8 @@ type NotifyTripMembersParams struct {
 	CreatedBy    uuid.UUID        `json:"created_by"`
 }
 
-func (q *Queries) NotifyTripMembers(ctx context.Context, arg NotifyTripMembersParams) error {
-	_, err := q.db.Exec(ctx, notifyTripMembers,
+func (q *Queries) NotifyOtherTripMembers(ctx context.Context, arg NotifyOtherTripMembersParams) error {
+	_, err := q.db.Exec(ctx, notifyOtherTripMembers,
 		arg.TripID,
 		arg.Message,
 		arg.Type,

@@ -242,7 +242,7 @@ SELECT
 FROM
     users
 WHERE
-    id = ANY($1::UUID[])
+    id = ANY($1 :: UUID [])
 ORDER BY
     created_at DESC
 `
