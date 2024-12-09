@@ -1,5 +1,5 @@
 import { component$, useContext } from "@builder.io/qwik";
-import { CurrentMemberContext, useCancelInviteUser } from "./layout";
+import { CurrentMemberContext, useUpdateMemberStatus } from "./layout";
 import {
   type Member,
   type MemberStatusEnum,
@@ -31,7 +31,7 @@ const MemberStatus = component$(({ status }: { status: MemberStatusEnum }) => {
 const Actions = component$(
   ({ member, tripID }: { member: Member; tripID: string }) => {
     const actions = [];
-    const cancelInvite = useCancelInviteUser();
+    const updateStatus = useUpdateMemberStatus();
 
     if (member.member_status === memberStatusEnum.Values.pending) {
       actions.push(
@@ -40,9 +40,10 @@ const Actions = component$(
             class="hover:text-error"
             type="button"
             onClick$={() => {
-              cancelInvite.submit({
+              updateStatus.submit({
                 userID: member.id,
                 tripID: tripID,
+                memberStatus: memberStatusEnum.Values.cancelled,
               });
             }}
           >

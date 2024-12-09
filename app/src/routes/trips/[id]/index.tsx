@@ -9,6 +9,7 @@ import { Card, CardTitle } from "~/components";
 import { Members } from "./Members";
 import { useUserData } from "~/routes/layout";
 import { getCanMemberEdit } from "~/helpers/members";
+import { memberStatusEnum } from "~/types/members";
 
 export default component$(() => {
   const data = useTripData();
@@ -49,7 +50,7 @@ export default component$(() => {
                   updateMemberStatus.submit({
                     tripID: trip.id,
                     userID: currentMember.id,
-                    memberStatus: "declined",
+                    memberStatus: memberStatusEnum.Values.declined,
                   });
                 }}
               >
@@ -61,7 +62,7 @@ export default component$(() => {
                   updateMemberStatus.submit({
                     tripID: trip.id,
                     userID: currentMember.id,
-                    memberStatus: "accepted",
+                    memberStatus: memberStatusEnum.Values.accepted,
                   });
                 }}
               >
