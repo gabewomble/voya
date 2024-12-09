@@ -18,7 +18,7 @@ VALUES
         @created_by
     );
 
--- name: NotifyTripMembers :exec
+-- name: NotifyOtherTripMembers :exec
 INSERT INTO
     notifications (
         user_id,
@@ -39,7 +39,8 @@ FROM
     trip_members tm
 WHERE
     tm.trip_id = @trip_id
-    AND tm.member_status IN ('accepted', 'owner');
+    AND tm.member_status IN ('accepted', 'owner')
+    AND tm.user_id != @created_by;
 
 -- name: GetUnreadNotifications :many
 SELECT

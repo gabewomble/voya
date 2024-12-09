@@ -28,6 +28,7 @@ const NotificationMessage = component$<{ notification: Notification }>(
     const { user_id, created_by, target_user_id } = notification;
     const users = useContext(ActivityUsersContext);
 
+    // TODO: clean up later
     switch (notification.notification_type) {
       case "trip_invite_pending":
         message = `${users[created_by].name} invited you to their trip`;
@@ -40,13 +41,21 @@ const NotificationMessage = component$<{ notification: Notification }>(
         }
         break;
       case "trip_invite_declined":
-        message = `${users[target_user_id]} declined your invitation`;
+        message = `${users[target_user_id].name} declined your invitation`;
         break;
       case "trip_member_removed":
-        message = `${users[created_by]} removed you from the trip`;
+        if (user_id === target_user_id) {
+          message = `${users[created_by].name} removed you from the trip`;
+        } else {
+          if (target_user_id === created_by) {
+            message = `${users[target_user_id].name} left the trip`;
+          } else {
+            message = `${users[target_user_id].name} was removed from the trip`;
+          }
+        }
         break;
       case "trip_ownership_transfer":
-        message = `${users[created_by]} transferred the trip ownership`;
+        message = `${users[created_by].name} transferred the trip ownership`;
         break;
     }
 

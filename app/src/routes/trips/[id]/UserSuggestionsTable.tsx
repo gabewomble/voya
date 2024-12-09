@@ -4,6 +4,7 @@ import { useInviteUser } from "./layout";
 import type { User } from "~/types/users";
 import type { Trip } from "~/types/trips";
 import type { Member } from "~/types/members";
+import { HiUserPlusOutline } from "@qwikest/icons/heroicons";
 
 export const UserSuggestionsTable = component$(
   ({
@@ -42,10 +43,14 @@ export const UserSuggestionsTable = component$(
                       userID: user.id,
                       tripID: trip.id,
                     });
+                    userSuggestions.value = userSuggestions.value.filter(
+                      (u) => u.id !== user.id,
+                    );
                   }}
                   class="btn btn-outline btn-primary btn-sm"
                   type="button"
                 >
+                  <HiUserPlusOutline class="h-4 w-4" />
                   Invite
                 </button>
               </td>

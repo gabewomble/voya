@@ -203,7 +203,7 @@ func (s *Server) handleNotifyInviteAccepted(c *gin.Context, params handleNotifyM
 	}
 
 	// Notify trip members
-	err = params.Queries.NotifyTripMembers(c, repository.NotifyTripMembersParams{
+	err = params.Queries.NotifyOtherTripMembers(c, repository.NotifyOtherTripMembersParams{
 		TripID:       params.TripID,
 		Message:      "A user has accepted the trip invitation",
 		Type:         repository.NotificationTypeTripInviteAccepted,
@@ -228,7 +228,7 @@ func (s *Server) handleNotifyInviteCancelled(c *gin.Context, params handleNotify
 
 func (s *Server) handleNotifyUserRemoved(c *gin.Context, params handleNotifyMemberStatusUpdateParams) error {
 	currentUser := s.ctxGetUser(c)
-	err := params.Queries.NotifyTripMembers(c, repository.NotifyTripMembersParams{
+	err := params.Queries.NotifyOtherTripMembers(c, repository.NotifyOtherTripMembersParams{
 		TripID:       params.TripID,
 		Message:      "A user has been removed from the trip",
 		Type:         repository.NotificationTypeTripMemberRemoved,
@@ -241,12 +241,23 @@ func (s *Server) handleNotifyUserRemoved(c *gin.Context, params handleNotifyMemb
 		return err
 	}
 
+	err = params.Queries.DeleteNotificationsByType(c, repository.DeleteNotificationsByTypeParams{
+		UserID: params.TargetUser.ID,
+		TripID: params.TripID,
+		Type:   repository.NotificationTypeTripInviteAccepted,
+	})
+
+	if err != nil {
+		s.log.LogError(c, "handleNotifyUserRemoved: DeleteNotificationsByType failed", err)
+		return err
+	}
+
 	return nil
 }
 
 func (s *Server) handleNotifyOwnershipTransfer(c *gin.Context, params handleNotifyMemberStatusUpdateParams) error {
 	currentUser := s.ctxGetUser(c)
-	err := params.Queries.NotifyTripMembers(c, repository.NotifyTripMembersParams{
+	err := params.Queries.NotifyOtherTripMembers(c, repository.NotifyOtherTripMembersParams{
 		TripID:       params.TripID,
 		Message:      "The trip ownership has been transferred",
 		Type:         repository.NotificationTypeTripOwnershipTransfer,
@@ -287,7 +298,18 @@ type handleNotifyTripInviteParams struct {
 func (s *Server) handleNotifyTripInvite(c *gin.Context, params handleNotifyTripInviteParams) error {
 	currentUser := s.ctxGetUser(c)
 
-	err := params.Queries.InsertNotification(c, repository.InsertNotificationParams{
+	err := params.Queries.DeleteNotificationsByType(c, repository.DeleteNotificationsByTypeParams{
+		UserID: params.TargetUserID,
+		TripID: params.TripID,
+		Type:   repository.NotificationTypeTripMemberRemoved,
+	})
+
+	if err != nil {
+		s.log.LogError(c, "handleNotifyTripInvite: DeleteNotificationsByType failed", err)
+		return err
+	}
+
+	err = params.Queries.InsertNotification(c, repository.InsertNotificationParams{
 		UserID:       params.TargetUserID,
 		Type:         repository.NotificationTypeTripInvitePending,
 		TripID:       params.TripID,
