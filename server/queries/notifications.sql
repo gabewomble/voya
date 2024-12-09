@@ -1,6 +1,12 @@
 -- name: InsertNotification :exec
 INSERT INTO
-    notifications (user_id, trip_id, message, TYPE, metadata)
+    notifications (
+        user_id,
+        trip_id,
+        message,
+        notification_type,
+        metadata
+    )
 VALUES
     (@user_id, @trip_id, @message, @type, @metadata);
 
@@ -10,7 +16,7 @@ SELECT
     user_id,
     trip_id,
     message,
-    TYPE,
+    notification_type,
     created_at,
     read_at,
     metadata
@@ -46,7 +52,7 @@ SELECT
     user_id,
     trip_id,
     message,
-    TYPE,
+    notification_type,
     created_at,
     read_at,
     metadata
@@ -69,7 +75,7 @@ SELECT
     user_id,
     trip_id,
     message,
-    TYPE,
+    notification_type,
     created_at,
     read_at,
     metadata
@@ -90,3 +96,11 @@ FROM
 WHERE
     user_id = @user_id
     AND read_at IS NULL;
+
+-- name: DeleteNotificationsByType :exec
+DELETE FROM
+    notifications
+WHERE
+    user_id = @user_id
+    AND trip_id = @trip_id
+    AND notification_type = @type;

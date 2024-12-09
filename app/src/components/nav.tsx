@@ -1,5 +1,6 @@
 import { component$, useContext } from "@builder.io/qwik";
 import { Form, Link, globalAction$, zod$ } from "@builder.io/qwik-city";
+import { ActivityContext } from "~/context/activity";
 import { UserContext } from "~/context/user";
 import { serverFetch } from "~/helpers/server-fetch";
 
@@ -24,9 +25,11 @@ export const useLogout = globalAction$(async (_, request) => {
 
 export const Nav = component$(() => {
   const user = useContext(UserContext);
+  const activity = useContext(ActivityContext);
   const logout = useLogout();
 
   const isLoggedIn = !!user.value;
+  const unreadActivityCount = activity.unreadCount;
 
   return (
     <nav class="navbar bg-base-300 shadow-lg">
@@ -37,7 +40,17 @@ export const Nav = component$(() => {
         <div class="flex items-center gap-4 space-x-4">
           {isLoggedIn ? (
             <>
-              <Link class="btn btn-ghost" href="/trips">
+              <div class="indicator">
+                {unreadActivityCount > 0 && (
+                  <span class="badge indicator-item badge-secondary">
+                    {unreadActivityCount}
+                  </span>
+                )}
+                <Link class="link-hover link p-1" href="/activity">
+                  Activity
+                </Link>
+              </div>
+              <Link class="link-hover link p-1" href="/trips">
                 My Trips
               </Link>
               <div class="dropdown dropdown-end">

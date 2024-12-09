@@ -48,13 +48,33 @@ func (q *Queries) DeleteNotification(ctx context.Context, arg DeleteNotification
 	return err
 }
 
+const deleteNotificationsByType = `-- name: DeleteNotificationsByType :exec
+DELETE FROM
+    notifications
+WHERE
+    user_id = $1
+    AND trip_id = $2
+    AND notification_type = $3
+`
+
+type DeleteNotificationsByTypeParams struct {
+	UserID uuid.UUID        `json:"user_id"`
+	TripID uuid.UUID        `json:"trip_id"`
+	Type   NotificationType `json:"type"`
+}
+
+func (q *Queries) DeleteNotificationsByType(ctx context.Context, arg DeleteNotificationsByTypeParams) error {
+	_, err := q.db.Exec(ctx, deleteNotificationsByType, arg.UserID, arg.TripID, arg.Type)
+	return err
+}
+
 const getNotificationById = `-- name: GetNotificationById :one
 SELECT
     id,
     user_id,
     trip_id,
     message,
-    TYPE,
+    notification_type,
     created_at,
     read_at,
     metadata
@@ -71,14 +91,14 @@ type GetNotificationByIdParams struct {
 }
 
 type GetNotificationByIdRow struct {
-	ID        uuid.UUID                    `json:"id"`
-	UserID    uuid.UUID                    `json:"user_id"`
-	TripID    uuid.UUID                    `json:"trip_id"`
-	Message   string                       `json:"message"`
-	Type      NotificationType             `json:"type"`
-	CreatedAt *time.Time                   `json:"created_at"`
-	ReadAt    *time.Time                   `json:"read_at"`
-	Metadata  dbtypes.NotificationMetadata `json:"metadata"`
+	ID               uuid.UUID                    `json:"id"`
+	UserID           uuid.UUID                    `json:"user_id"`
+	TripID           uuid.UUID                    `json:"trip_id"`
+	Message          string                       `json:"message"`
+	NotificationType NotificationType             `json:"notification_type"`
+	CreatedAt        *time.Time                   `json:"created_at"`
+	ReadAt           *time.Time                   `json:"read_at"`
+	Metadata         dbtypes.NotificationMetadata `json:"metadata"`
 }
 
 func (q *Queries) GetNotificationById(ctx context.Context, arg GetNotificationByIdParams) (GetNotificationByIdRow, error) {
@@ -89,7 +109,7 @@ func (q *Queries) GetNotificationById(ctx context.Context, arg GetNotificationBy
 		&i.UserID,
 		&i.TripID,
 		&i.Message,
-		&i.Type,
+		&i.NotificationType,
 		&i.CreatedAt,
 		&i.ReadAt,
 		&i.Metadata,
@@ -103,7 +123,7 @@ SELECT
     user_id,
     trip_id,
     message,
-    TYPE,
+    notification_type,
     created_at,
     read_at,
     metadata
@@ -117,14 +137,14 @@ ORDER BY
 `
 
 type GetUnreadNotificationsRow struct {
-	ID        uuid.UUID                    `json:"id"`
-	UserID    uuid.UUID                    `json:"user_id"`
-	TripID    uuid.UUID                    `json:"trip_id"`
-	Message   string                       `json:"message"`
-	Type      NotificationType             `json:"type"`
-	CreatedAt *time.Time                   `json:"created_at"`
-	ReadAt    *time.Time                   `json:"read_at"`
-	Metadata  dbtypes.NotificationMetadata `json:"metadata"`
+	ID               uuid.UUID                    `json:"id"`
+	UserID           uuid.UUID                    `json:"user_id"`
+	TripID           uuid.UUID                    `json:"trip_id"`
+	Message          string                       `json:"message"`
+	NotificationType NotificationType             `json:"notification_type"`
+	CreatedAt        *time.Time                   `json:"created_at"`
+	ReadAt           *time.Time                   `json:"read_at"`
+	Metadata         dbtypes.NotificationMetadata `json:"metadata"`
 }
 
 func (q *Queries) GetUnreadNotifications(ctx context.Context, userID uuid.UUID) ([]GetUnreadNotificationsRow, error) {
@@ -141,7 +161,7 @@ func (q *Queries) GetUnreadNotifications(ctx context.Context, userID uuid.UUID) 
 			&i.UserID,
 			&i.TripID,
 			&i.Message,
-			&i.Type,
+			&i.NotificationType,
 			&i.CreatedAt,
 			&i.ReadAt,
 			&i.Metadata,
@@ -158,7 +178,13 @@ func (q *Queries) GetUnreadNotifications(ctx context.Context, userID uuid.UUID) 
 
 const insertNotification = `-- name: InsertNotification :exec
 INSERT INTO
-    notifications (user_id, trip_id, message, TYPE, metadata)
+    notifications (
+        user_id,
+        trip_id,
+        message,
+        notification_type,
+        metadata
+    )
 VALUES
     ($1, $2, $3, $4, $5)
 `
@@ -188,7 +214,7 @@ SELECT
     user_id,
     trip_id,
     message,
-    TYPE,
+    notification_type,
     created_at,
     read_at,
     metadata
@@ -209,14 +235,14 @@ type ListNotificationsParams struct {
 }
 
 type ListNotificationsRow struct {
-	ID        uuid.UUID                    `json:"id"`
-	UserID    uuid.UUID                    `json:"user_id"`
-	TripID    uuid.UUID                    `json:"trip_id"`
-	Message   string                       `json:"message"`
-	Type      NotificationType             `json:"type"`
-	CreatedAt *time.Time                   `json:"created_at"`
-	ReadAt    *time.Time                   `json:"read_at"`
-	Metadata  dbtypes.NotificationMetadata `json:"metadata"`
+	ID               uuid.UUID                    `json:"id"`
+	UserID           uuid.UUID                    `json:"user_id"`
+	TripID           uuid.UUID                    `json:"trip_id"`
+	Message          string                       `json:"message"`
+	NotificationType NotificationType             `json:"notification_type"`
+	CreatedAt        *time.Time                   `json:"created_at"`
+	ReadAt           *time.Time                   `json:"read_at"`
+	Metadata         dbtypes.NotificationMetadata `json:"metadata"`
 }
 
 func (q *Queries) ListNotifications(ctx context.Context, arg ListNotificationsParams) ([]ListNotificationsRow, error) {
@@ -233,7 +259,7 @@ func (q *Queries) ListNotifications(ctx context.Context, arg ListNotificationsPa
 			&i.UserID,
 			&i.TripID,
 			&i.Message,
-			&i.Type,
+			&i.NotificationType,
 			&i.CreatedAt,
 			&i.ReadAt,
 			&i.Metadata,

@@ -1,9 +1,11 @@
 import { routeAction$, routeLoader$, z, zod$ } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
 import { getTripByIdResponseSchema } from "~/types/api";
+import type { Member } from "~/types/members";
 import { memberStatusEnum } from "~/types/members";
 import type { InitialValues } from "@modular-forms/qwik";
 import type { AddMemberForm } from "./Members";
+import { createContextId } from "@builder.io/qwik";
 
 // Pretty annoying I need to export this from index.tsx or layout.tsx
 export const useAddMemberLoader = routeLoader$<InitialValues<AddMemberForm>>(
@@ -66,3 +68,7 @@ export const useTripData = routeLoader$(async (requestEvent) => {
   const json = await res.json();
   return getTripByIdResponseSchema.parse(json);
 });
+
+export const CurrentMemberContext = createContextId<Member | undefined>(
+  "CurrentMember",
+);

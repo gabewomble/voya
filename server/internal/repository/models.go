@@ -110,14 +110,14 @@ func (ns NullNotificationType) Value() (driver.Value, error) {
 }
 
 type Notification struct {
-	ID        uuid.UUID                    `json:"id"`
-	UserID    uuid.UUID                    `json:"user_id"`
-	TripID    uuid.UUID                    `json:"trip_id"`
-	Type      NotificationType             `json:"type"`
-	Message   string                       `json:"message"`
-	CreatedAt *time.Time                   `json:"created_at"`
-	ReadAt    *time.Time                   `json:"read_at"`
-	Metadata  dbtypes.NotificationMetadata `json:"metadata"`
+	ID               uuid.UUID                    `json:"id"`
+	UserID           uuid.UUID                    `json:"user_id"`
+	TripID           uuid.UUID                    `json:"trip_id"`
+	NotificationType NotificationType             `json:"notification_type"`
+	Message          string                       `json:"message"`
+	CreatedAt        *time.Time                   `json:"created_at"`
+	ReadAt           *time.Time                   `json:"read_at"`
+	Metadata         dbtypes.NotificationMetadata `json:"metadata"`
 }
 
 type Token struct {

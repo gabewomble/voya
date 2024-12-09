@@ -1,14 +1,13 @@
 import { component$, useContext } from "@builder.io/qwik";
-import { useCancelInviteUser } from "./layout";
+import { CurrentMemberContext, useCancelInviteUser } from "./layout";
 import {
   type Member,
   type MemberStatusEnum,
   memberStatusEnum,
 } from "~/types/members";
-import { UserContext } from "~/context/user";
 import { HiXCircleOutline } from "@qwikest/icons/heroicons";
-import type { User } from "~/types/users";
 import type { Trip } from "~/types/trips";
+import { getCanMemberEdit } from "~/helpers/members";
 
 function capitalizeFirstLetter(string: string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
@@ -30,17 +29,7 @@ const MemberStatus = component$(({ status }: { status: MemberStatusEnum }) => {
 });
 
 const Actions = component$(
-  ({
-    canEdit,
-    // currentUser,
-    member,
-    tripID,
-  }: {
-    canEdit: boolean;
-    currentUser: User | null;
-    member: Member;
-    tripID: string;
-  }) => {
+  ({ member, tripID }: { member: Member; tripID: string }) => {
     const actions = [];
     const cancelInvite = useCancelInviteUser();
 
@@ -50,7 +39,6 @@ const Actions = component$(
           <button
             class="hover:text-error"
             type="button"
-            disabled={!canEdit}
             onClick$={() => {
               cancelInvite.submit({
                 userID: member.id,
@@ -70,14 +58,8 @@ const Actions = component$(
 
 export const MembersTable = component$(
   ({ trip, members }: { trip: Trip; members: Member[] }) => {
-    const currentUser = useContext(UserContext).value;
-
-    const currentUserCanEdit = members.some((member) => {
-      const memberCanEdit =
-        member.member_status === memberStatusEnum.Values.owner ||
-        member.member_status === memberStatusEnum.Values.accepted;
-      return memberCanEdit && member.id === currentUser?.id;
-    });
+    const currentMember = useContext(CurrentMemberContext);
+    const canEdit = getCanMemberEdit(currentMember);
 
     const membersToRender = members.filter((member) => {
       return (
@@ -110,14 +92,7 @@ export const MembersTable = component$(
               <td>
                 <MemberStatus status={member.member_status} />
               </td>
-              <td>
-                <Actions
-                  canEdit={currentUserCanEdit}
-                  currentUser={currentUser}
-                  member={member}
-                  tripID={trip.id}
-                />
-              </td>
+              <td>{canEdit && <Actions member={member} tripID={trip.id} />}</td>
             </tr>
           ))}
         </tbody>

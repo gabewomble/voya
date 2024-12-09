@@ -9,6 +9,9 @@ import { authenticate } from "~/middleware/auth";
 import { routeLoader$, type RequestHandler } from "@builder.io/qwik-city";
 import { UserContext } from "~/context/user";
 import type { User } from "~/types/users";
+import { serverFetch } from "~/helpers/server-fetch";
+import { unreadNotificationCountResponseSchema } from "~/types/api";
+import { ActivityContext } from "~/context/activity";
 
 export const onRequest: RequestHandler = async (request) => {
   await authenticate(request);
@@ -30,6 +33,24 @@ export const onGet: RequestHandler = async ({ cacheControl, url }) => {
   }
 };
 
+export const useActivityCount = routeLoader$(async (request) => {
+  const res = await serverFetch(
+    "/notifications/unread/count",
+    {
+      method: "GET",
+    },
+    request,
+  );
+
+  if (!res.ok) return 0;
+
+  const result = unreadNotificationCountResponseSchema.safeParse(
+    await res.json(),
+  );
+
+  return result.success ? result.data.count : 0;
+});
+
 export const useUserData = routeLoader$(async (request) => {
   const user = request.sharedMap.get("user");
   return user as User | null;
@@ -37,6 +58,11 @@ export const useUserData = routeLoader$(async (request) => {
 
 export default component$(() => {
   const userData = useUserData();
+  const activityCount = useActivityCount();
+
+  useContextProvider(ActivityContext, {
+    unreadCount: activityCount.value,
+  });
 
   useContextProvider(UserContext, userData);
   // This is necessary for the value to be available on the client!

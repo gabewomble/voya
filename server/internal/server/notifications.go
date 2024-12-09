@@ -201,6 +201,17 @@ func (s *Server) handleNotifyMemberStatusUpdate(c *gin.Context, params handleNot
 	case repository.MemberStatusEnumOwner:
 		insertNotificationParams.Type = repository.NotificationTypeTripOwnershipTransfer
 		insertNotificationParams.Message = "You are now the owner of a trip"
+	case repository.MemberStatusEnumCancelled:
+		err := params.Queries.DeleteNotificationsByType(c, repository.DeleteNotificationsByTypeParams{
+			UserID: params.TargetUserID,
+			TripID: params.TripID,
+			Type:   repository.NotificationTypeTripInvitePending,
+		})
+		if err != nil {
+			s.log.LogError(c, "handleNotifyMemberStatusUpdate: DeleteNotificationsByType failed", err)
+			return err
+		}
+		return nil
 
 	default:
 		return nil
