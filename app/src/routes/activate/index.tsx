@@ -7,6 +7,7 @@ import {
   Link,
 } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
+import { setCookie } from "~/helpers/set-cookie";
 
 async function handleActivation(requestEvent: RequestEventBase, token: string) {
   const res = await serverFetch(
@@ -23,12 +24,7 @@ async function handleActivation(requestEvent: RequestEventBase, token: string) {
     const { token: newToken } = json;
 
     if (newToken) {
-      requestEvent.cookie.set("token", newToken, {
-        path: "/",
-        httpOnly: true,
-        sameSite: true,
-        secure: false,
-      });
+      setCookie("token", newToken, requestEvent);
     }
 
     return true;

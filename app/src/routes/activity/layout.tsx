@@ -1,5 +1,5 @@
 import { createContextId } from "@builder.io/qwik";
-import { routeAction$, routeLoader$, z, zod$ } from "@builder.io/qwik-city";
+import { type RequestEventBase, routeAction$, routeLoader$, z, zod$ } from "@builder.io/qwik-city";
 import { serverFetch } from "~/helpers/server-fetch";
 import {
   batchGetUsersResponseSchema,
@@ -7,13 +7,16 @@ import {
 } from "~/types/api";
 import { type User } from "~/types/users";
 
+const getIsShowingAll = (req: RequestEventBase) => {
+  return req.url.searchParams.get("show") === "all";
+}
+
 export const useIsShowingAll = routeLoader$(async (request) => {
-  const showAll = request.url.searchParams.get("show") === "all";
-  return showAll;
+  return getIsShowingAll(request);
 });
 
 export const useGetActivity = routeLoader$(async (request) => {
-  const isShowingAll = request.url.searchParams.get("show") === "all";
+  const isShowingAll = getIsShowingAll(request);
 
   const res = await serverFetch(
     isShowingAll ? "/notifications" : "/notifications/unread",
@@ -46,20 +49,20 @@ export const useGetActivity = routeLoader$(async (request) => {
     request,
   );
 
-  const usersCache: Record<string, User> = {};
+  const users: Record<string, User> = {};
   const batchUsers = batchGetUsersResponseSchema.safeParse(
     await batchResult.json(),
   );
 
   if (batchUsers.success) {
     batchUsers.data.users.forEach((user) => {
-      usersCache[user.id] = user;
+      users[user.id] = user;
     });
   }
 
   return {
     ...result,
-    users: usersCache,
+    users: users,
   };
 });
 
