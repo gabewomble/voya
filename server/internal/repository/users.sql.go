@@ -229,6 +229,53 @@ func (q *Queries) GetUserForToken(ctx context.Context, arg GetUserForTokenParams
 	return i, err
 }
 
+const getUsersById = `-- name: GetUsersById :many
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version,
+    username
+FROM
+    users
+WHERE
+    id = ANY($1::UUID[])
+ORDER BY
+    created_at DESC
+`
+
+func (q *Queries) GetUsersById(ctx context.Context, ids []uuid.UUID) ([]User, error) {
+	rows, err := q.db.Query(ctx, getUsersById, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.Name,
+			&i.Email,
+			&i.PasswordHash,
+			&i.Activated,
+			&i.Version,
+			&i.Username,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertUser = `-- name: InsertUser :one
 INSERT INTO
     users (name, email, username, password_hash, activated)

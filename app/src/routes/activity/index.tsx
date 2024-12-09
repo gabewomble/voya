@@ -1,12 +1,19 @@
-import { component$ } from "@builder.io/qwik";
+import { component$, useContextProvider } from "@builder.io/qwik";
 import { Link } from "@builder.io/qwik-city";
 import { NotificationItem } from "./Notification";
-import { useIsShowingAll, useGetActivity, useMarkAllAsRead } from "./layout";
+import {
+  useIsShowingAll,
+  useGetActivity,
+  useMarkAllAsRead,
+  ActivityUsersContext,
+} from "./layout";
 
 export default component$(() => {
   const isShowingAll = useIsShowingAll().value;
-  const { notifications, total } = useGetActivity().value;
+  const { notifications, total, users } = useGetActivity().value;
   const markAllAsRead = useMarkAllAsRead();
+
+  useContextProvider(ActivityUsersContext, users);
 
   return (
     <div class="container mx-auto py-8">

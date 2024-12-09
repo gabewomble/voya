@@ -5,10 +5,41 @@ INSERT INTO
         trip_id,
         message,
         notification_type,
-        metadata
+        target_user_id,
+        created_by
     )
 VALUES
-    (@user_id, @trip_id, @message, @type, @metadata);
+    (
+        @user_id,
+        @trip_id,
+        @message,
+        @type,
+        @target_user_id,
+        @created_by
+    );
+
+-- name: NotifyTripMembers :exec
+INSERT INTO
+    notifications (
+        user_id,
+        trip_id,
+        message,
+        notification_type,
+        target_user_id,
+        created_by
+    )
+SELECT
+    tm.user_id,
+    @trip_id,
+    @message,
+    @type,
+    @target_user_id,
+    @created_by
+FROM
+    trip_members tm
+WHERE
+    tm.trip_id = @trip_id
+    AND tm.member_status IN ('accepted', 'owner');
 
 -- name: GetUnreadNotifications :many
 SELECT
@@ -19,7 +50,8 @@ SELECT
     notification_type,
     created_at,
     read_at,
-    metadata
+    target_user_id,
+    created_by
 FROM
     notifications
 WHERE
@@ -55,7 +87,8 @@ SELECT
     notification_type,
     created_at,
     read_at,
-    metadata
+    target_user_id,
+    created_by
 FROM
     notifications
 WHERE
@@ -78,7 +111,8 @@ SELECT
     notification_type,
     created_at,
     read_at,
-    metadata
+    target_user_id,
+    created_by
 FROM
     notifications
 WHERE

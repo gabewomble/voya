@@ -244,8 +244,8 @@ func (s *Server) updateTripMemberStatusHandler(c *gin.Context) {
 	s.log.LogInfo(c, "updateTripMemberStatusHandler: handleNotifyMemberStatusUpdate")
 	err = s.handleNotifyMemberStatusUpdate(c, handleNotifyMemberStatusUpdateParams{
 		TripID:       tripID,
-		TargetUserID: input.UserID,
-		OwnerID:      owner.ID,
+		TargetUser:   targetMember,
+		Owner:        owner,
 		MemberStatus: input.MemberStatus,
 		Queries:      queries,
 	})

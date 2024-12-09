@@ -57,6 +57,23 @@ FROM
 WHERE
     id = @id;
 
+-- name: GetUsersById :many
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version,
+    username
+FROM
+    users
+WHERE
+    id = ANY(@ids :: UUID [])
+ORDER BY
+    created_at DESC;
+
 -- name: GetUserForToken :one
 SELECT
     id,

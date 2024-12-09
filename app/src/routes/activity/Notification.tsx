@@ -1,7 +1,7 @@
-import { component$ } from "@builder.io/qwik";
+import { component$, useContext } from "@builder.io/qwik";
 import { formatDistance } from "~/helpers/date";
 import { type Notification } from "~/types/notifications";
-import { useMarkAsRead } from "./layout";
+import { ActivityUsersContext, useMarkAsRead } from "./layout";
 
 const NotificationIcon = component$<{
   type: Notification["notification_type"];
@@ -25,22 +25,24 @@ const NotificationIcon = component$<{
 const NotificationMessage = component$<{ notification: Notification }>(
   ({ notification }) => {
     let message = notification.message;
+    const { created_by, target_user_id } = notification;
+    const users = useContext(ActivityUsersContext);
 
     switch (notification.notification_type) {
       case "trip_invite_pending":
-        message = `${notification.metadata.user_name} invited you to join their trip`;
+        message = `${users[created_by].name} invited you to their trip`;
         break;
       case "trip_invite_accepted":
-        message = `${notification.metadata.user_name} accepted your invitation`;
+        message = `${users[target_user_id].name} joined your trip`;
         break;
       case "trip_invite_declined":
-        message = `${notification.metadata.user_name} declined your invitation`;
+        message = `${users[target_user_id]} declined your invitation`;
         break;
       case "trip_member_removed":
-        message = `${notification.metadata.user_name} removed you from the trip`;
+        message = `${users[created_by]} removed you from the trip`;
         break;
       case "trip_ownership_transfer":
-        message = `${notification.metadata.user_name} transferred the trip ownership to you`;
+        message = `${users[created_by]} transferred the trip ownership`;
         break;
     }
 

@@ -37,3 +37,9 @@ export const listNotificationsResponseSchema = z.object({
 export type ListNotificationsResponseSchema = z.infer<
   typeof listNotificationsResponseSchema
 >;
+
+export const batchGetUsersResponseSchema = z.object({
+  users: z.array(userSchema),
+});
+
+export type BatchGetUsersResponse = z.infer<typeof batchGetUsersResponseSchema>;

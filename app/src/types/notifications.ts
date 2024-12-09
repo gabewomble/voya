@@ -21,12 +21,14 @@ export const notificationMetadataSchema = z.object({
 
 export const notificationSchema = z.object({
   id: z.string().uuid(),
+  user_id: z.string().uuid(),
   trip_id: z.string().uuid(),
   message: z.string(),
   notification_type: notificationTypeEnum,
   created_at: z.string(),
+  created_by: z.string().uuid(),
+  target_user_id: z.string().uuid(),
   read_at: z.string().nullable(),
-  metadata: notificationMetadataSchema,
 });
 
 export type Notification = z.infer<typeof notificationSchema>;

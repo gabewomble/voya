@@ -198,6 +198,35 @@ func (s *Server) getUserByUsernameHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": sanitizeUser(&user)})
 }
 
+func (s *Server) getUsersByIdsHandler(c *gin.Context) {
+	var input struct {
+		UserIDs []uuid.UUID `json:"user_ids"`
+	}
+
+	if err := c.BindJSON(&input); err != nil {
+		s.badRequest(c, errorDetailsFromError(err))
+		return
+	}
+
+	users, err := s.db.Queries().GetUsersById(c, input.UserIDs)
+	if err != nil {
+		s.errorResponse(c, http.StatusInternalServerError, errorDetailsFromError(err))
+		return
+	}
+
+	if users == nil {
+		users = make([]repository.User, 0)
+	}
+
+	cleanUsers := make([]cleanUser, len(users))
+
+	for i, u := range users {
+		cleanUsers[i] = sanitizeUser(&u)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"users": cleanUsers})
+}
+
 func (s *Server) activateUserHandler(c *gin.Context) {
 	// Parse activation token
 	var input struct {
