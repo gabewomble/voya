@@ -57,6 +57,23 @@ FROM
 WHERE
     id = @id;
 
+-- name: GetUsersById :many
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version,
+    username
+FROM
+    users
+WHERE
+    id = ANY(@ids :: UUID [])
+ORDER BY
+    created_at DESC;
+
 -- name: GetUserForToken :one
 SELECT
     id,
@@ -150,3 +167,34 @@ SELECT
         WHERE
             id = @id
     );
+
+-- name: SearchUsersNotInTrip :many
+SELECT
+    u.id,
+    u.created_at,
+    u.name,
+    u.email,
+    u.password_hash,
+    u.activated,
+    u.version,
+    u.username
+FROM
+    users u
+WHERE
+    NOT EXISTS (
+        SELECT
+            1
+        FROM
+            trip_members tm
+        WHERE
+            tm.trip_id = @trip_id
+            AND tm.user_id = u.id
+            AND tm.member_status IN ('accepted', 'owner', 'pending')
+    )
+    AND (
+        u.name ILIKE '%' || @identifier || '%'
+        OR u.email ILIKE '%' || @identifier || '%'
+        OR u.username ILIKE '%' || @identifier || '%'
+    )
+LIMIT
+    @user_limit;

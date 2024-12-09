@@ -1,12 +1,28 @@
-import { component$ } from "@builder.io/qwik";
+import { component$, useContextProvider } from "@builder.io/qwik";
 import { Link, type DocumentHead } from "@builder.io/qwik-city";
-import { useTripData } from "./layout";
+import {
+  CurrentMemberContext,
+  useTripData,
+  useUpdateMemberStatus,
+} from "./layout";
 import { Card, CardTitle } from "~/components";
 import { Members } from "./Members";
+import { useUserData } from "~/routes/layout";
+import { getCanMemberEdit } from "~/helpers/members";
 
 export default component$(() => {
   const data = useTripData();
-  const { trip } = data.value;
+  const currentUser = useUserData().value;
+  const { trip, members } = data.value;
+  const currentMember = members.find(
+    (member) => member.id === currentUser?.id,
+  )!;
+
+  useContextProvider(CurrentMemberContext, currentMember);
+
+  const canEdit = getCanMemberEdit(currentMember);
+  const isPending = currentMember.member_status === "pending";
+  const updateMemberStatus = useUpdateMemberStatus();
 
   return (
     <div class="container mx-auto flex flex-col gap-8 py-8">
@@ -15,12 +31,44 @@ export default component$(() => {
         <p class="py-4">{trip.description}</p>
 
         <div class="card-actions justify-end">
-          <Link href={`/trips/${trip.id}/edit`} class="btn btn-secondary">
-            Edit this trip
-          </Link>
-          <Link href="/trips" class="btn btn-primary">
-            Back to trips
-          </Link>
+          {canEdit && (
+            <>
+              <Link href={`/trips/${trip.id}/edit`} class="btn btn-secondary">
+                Edit this trip
+              </Link>
+              <Link href="/trips" class="btn btn-primary">
+                Back to trips
+              </Link>
+            </>
+          )}
+          {isPending && (
+            <>
+              <button
+                class="btn btn-outline btn-secondary btn-sm"
+                onClick$={() => {
+                  updateMemberStatus.submit({
+                    tripID: trip.id,
+                    userID: currentMember.id,
+                    memberStatus: "declined",
+                  });
+                }}
+              >
+                Decline invite
+              </button>
+              <button
+                class="btn btn-outline btn-primary btn-sm"
+                onClick$={() => {
+                  updateMemberStatus.submit({
+                    tripID: trip.id,
+                    userID: currentMember.id,
+                    memberStatus: "accepted",
+                  });
+                }}
+              >
+                Join this trip
+              </button>
+            </>
+          )}
         </div>
       </Card>
 

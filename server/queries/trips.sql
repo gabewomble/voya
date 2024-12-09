@@ -50,6 +50,7 @@ WHERE
             trip_members
         WHERE
             user_id = @user_id
+            AND member_status IN ('accepted', 'owner')
     );
 
 -- name: CheckUserCanViewTrip :one

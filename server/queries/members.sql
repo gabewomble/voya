@@ -81,4 +81,5 @@ SELECT
         WHERE
             trip_id = @trip_id
             AND user_id = @user_id
+            AND member_status IN ('accepted', 'owner', 'pending')
     );

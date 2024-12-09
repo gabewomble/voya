@@ -30,7 +30,3 @@ sql:
               import: "time"
               type: "Time"
               pointer: true
-          - column: "notifications.metadata"
-            go_type:
-              import: "server/internal/dbtypes"
-              type: "NotificationMetadata"

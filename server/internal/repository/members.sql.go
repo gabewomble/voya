@@ -46,6 +46,7 @@ SELECT
         WHERE
             trip_id = $1
             AND user_id = $2
+            AND member_status IN ('accepted', 'owner', 'pending')
     )
 `
 

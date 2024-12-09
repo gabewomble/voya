@@ -229,6 +229,53 @@ func (q *Queries) GetUserForToken(ctx context.Context, arg GetUserForTokenParams
 	return i, err
 }
 
+const getUsersById = `-- name: GetUsersById :many
+SELECT
+    id,
+    created_at,
+    name,
+    email,
+    password_hash,
+    activated,
+    version,
+    username
+FROM
+    users
+WHERE
+    id = ANY($1::UUID[])
+ORDER BY
+    created_at DESC
+`
+
+func (q *Queries) GetUsersById(ctx context.Context, ids []uuid.UUID) ([]User, error) {
+	rows, err := q.db.Query(ctx, getUsersById, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.Name,
+			&i.Email,
+			&i.PasswordHash,
+			&i.Activated,
+			&i.Version,
+			&i.Username,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertUser = `-- name: InsertUser :one
 INSERT INTO
     users (name, email, username, password_hash, activated)
@@ -302,6 +349,73 @@ type SearchUsersParams struct {
 
 func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]User, error) {
 	rows, err := q.db.Query(ctx, searchUsers, arg.Identifier, arg.UserID, arg.UserLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.Name,
+			&i.Email,
+			&i.PasswordHash,
+			&i.Activated,
+			&i.Version,
+			&i.Username,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchUsersNotInTrip = `-- name: SearchUsersNotInTrip :many
+SELECT
+    u.id,
+    u.created_at,
+    u.name,
+    u.email,
+    u.password_hash,
+    u.activated,
+    u.version,
+    u.username
+FROM
+    users u
+WHERE
+    NOT EXISTS (
+        SELECT
+            1
+        FROM
+            trip_members tm
+        WHERE
+            tm.trip_id = $1
+            AND tm.user_id = u.id
+            AND tm.member_status IN ('accepted', 'owner', 'pending')
+    )
+    AND (
+        u.name ILIKE '%' || $2 || '%'
+        OR u.email ILIKE '%' || $2 || '%'
+        OR u.username ILIKE '%' || $2 || '%'
+    )
+LIMIT
+    $3
+`
+
+type SearchUsersNotInTripParams struct {
+	TripID     uuid.UUID   `json:"trip_id"`
+	Identifier pgtype.Text `json:"identifier"`
+	UserLimit  int32       `json:"user_limit"`
+}
+
+func (q *Queries) SearchUsersNotInTrip(ctx context.Context, arg SearchUsersNotInTripParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, searchUsersNotInTrip, arg.TripID, arg.Identifier, arg.UserLimit)
 	if err != nil {
 		return nil, err
 	}

@@ -56,14 +56,14 @@ export const useLoginAction = formAction$<LoginForm>(
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              identifier: data.identifier,
+              identifier: identifier,
             }),
           },
           request,
         );
 
         if (resendRes.ok) {
-          throw request.redirect(303, "/activate?i=" + data.identifier);
+          throw request.redirect(303, "/activate?i=" + identifier);
         }
       }
 

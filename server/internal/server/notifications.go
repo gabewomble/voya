@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"server/internal/dbtypes"
 	"server/internal/repository"
 
 	"github.com/gin-gonic/gin"
@@ -171,55 +170,111 @@ func (s *Server) deleteNotificationHandler(c *gin.Context) {
 
 type handleNotifyMemberStatusUpdateParams struct {
 	TripID       uuid.UUID
-	TargetUserID uuid.UUID
-	OwnerID      uuid.UUID
+	Owner        repository.GetTripOwnerRow
+	TargetUser   repository.GetTripMemberRow
 	MemberStatus repository.MemberStatusEnum
 	Queries      *repository.Queries
 }
 
 func (s *Server) handleNotifyMemberStatusUpdate(c *gin.Context, params handleNotifyMemberStatusUpdateParams) error {
-	insertNotificationParams := repository.InsertNotificationParams{
-		UserID: params.TargetUserID,
-		TripID: params.TripID,
-	}
-
 	switch params.MemberStatus {
 	case repository.MemberStatusEnumAccepted:
-		insertNotificationParams.Type = repository.NotificationTypeTripInviteAccepted
-		insertNotificationParams.Message = "A user has accepted your trip invitation"
-		insertNotificationParams.UserID = params.OwnerID
-
+		return s.handleNotifyInviteAccepted(c, params)
 	case repository.MemberStatusEnumDeclined:
-		insertNotificationParams.Type = repository.NotificationTypeTripInviteDeclined
-		insertNotificationParams.Message = "A user has declined your trip invitation"
-		insertNotificationParams.UserID = params.OwnerID
-
+		return s.handleNotifyInviteDeclined(c, params)
 	case repository.MemberStatusEnumRemoved:
-		insertNotificationParams.Type = repository.NotificationTypeTripMemberRemoved
-		insertNotificationParams.Message = "You have been removed from a trip"
-
+		return s.handleNotifyUserRemoved(c, params)
 	case repository.MemberStatusEnumOwner:
-		insertNotificationParams.Type = repository.NotificationTypeTripOwnershipTransfer
-		insertNotificationParams.Message = "You are now the owner of a trip"
+		return s.handleNotifyOwnershipTransfer(c, params)
+	case repository.MemberStatusEnumCancelled:
+		return s.handleNotifyInviteCancelled(c, params)
 
 	default:
 		return nil
 	}
+}
 
-	currentUser := s.ctxGetUser(c)
-
-	metadata := dbtypes.NotificationMetadata{
-		UserID:   currentUser.ID,
-		UserName: currentUser.Name,
-	}
-	insertNotificationParams.Metadata = metadata
-
-	err := params.Queries.InsertNotification(c, insertNotificationParams)
+func (s *Server) handleNotifyInviteAccepted(c *gin.Context, params handleNotifyMemberStatusUpdateParams) error {
+	// Remove pending notification for user
+	err := s.removePendingInvite(c, params)
 
 	if err != nil {
-		s.log.LogError(c, "handleNotifyMemberStatusUpdate: InsertNotification failed", err)
 		return err
 	}
+
+	// Notify trip members
+	err = params.Queries.NotifyTripMembers(c, repository.NotifyTripMembersParams{
+		TripID:       params.TripID,
+		Message:      "A user has accepted the trip invitation",
+		Type:         repository.NotificationTypeTripInviteAccepted,
+		CreatedBy:    params.TargetUser.ID,
+		TargetUserID: params.TargetUser.ID,
+	})
+	if err != nil {
+		s.log.LogError(c, "handleNotifyInviteAccepted: NotifyTripMembers failed", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *Server) handleNotifyInviteDeclined(c *gin.Context, params handleNotifyMemberStatusUpdateParams) error {
+	return s.removePendingInvite(c, params)
+}
+
+func (s *Server) handleNotifyInviteCancelled(c *gin.Context, params handleNotifyMemberStatusUpdateParams) error {
+	return s.removePendingInvite(c, params)
+}
+
+func (s *Server) handleNotifyUserRemoved(c *gin.Context, params handleNotifyMemberStatusUpdateParams) error {
+	currentUser := s.ctxGetUser(c)
+	err := params.Queries.NotifyTripMembers(c, repository.NotifyTripMembersParams{
+		TripID:       params.TripID,
+		Message:      "A user has been removed from the trip",
+		Type:         repository.NotificationTypeTripMemberRemoved,
+		CreatedBy:    currentUser.ID,
+		TargetUserID: params.TargetUser.ID,
+	})
+
+	if err != nil {
+		s.log.LogError(c, "handleNotifyUserRemoved: NotifyTripMembers failed", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *Server) handleNotifyOwnershipTransfer(c *gin.Context, params handleNotifyMemberStatusUpdateParams) error {
+	currentUser := s.ctxGetUser(c)
+	err := params.Queries.NotifyTripMembers(c, repository.NotifyTripMembersParams{
+		TripID:       params.TripID,
+		Message:      "The trip ownership has been transferred",
+		Type:         repository.NotificationTypeTripOwnershipTransfer,
+		CreatedBy:    currentUser.ID,
+		TargetUserID: params.TargetUser.ID,
+	})
+
+	if err != nil {
+		s.log.LogError(c, "handleNotifyOwnershipTransfer: NotifyTripMembers failed", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *Server) removePendingInvite(c *gin.Context, params handleNotifyMemberStatusUpdateParams) error {
+	// Remove pending notification for user
+	err := params.Queries.DeleteNotificationsByType(c, repository.DeleteNotificationsByTypeParams{
+		UserID: params.TargetUser.ID,
+		TripID: params.TripID,
+		Type:   repository.NotificationTypeTripInvitePending,
+	})
+
+	if err != nil {
+		s.log.LogError(c, "handleNotifyInviteDeclined: DeleteNotificationsByType failed", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -233,14 +288,12 @@ func (s *Server) handleNotifyTripInvite(c *gin.Context, params handleNotifyTripI
 	currentUser := s.ctxGetUser(c)
 
 	err := params.Queries.InsertNotification(c, repository.InsertNotificationParams{
-		UserID:  params.TargetUserID,
-		Type:    repository.NotificationTypeTripInvitePending,
-		TripID:  params.TripID,
-		Message: "You have been invited to a trip",
-		Metadata: dbtypes.NotificationMetadata{
-			UserID:   currentUser.ID,
-			UserName: currentUser.Name,
-		},
+		UserID:       params.TargetUserID,
+		Type:         repository.NotificationTypeTripInvitePending,
+		TripID:       params.TripID,
+		Message:      "You have been invited to a trip",
+		CreatedBy:    currentUser.ID,
+		TargetUserID: params.TargetUserID,
 	})
 
 	if err != nil {
