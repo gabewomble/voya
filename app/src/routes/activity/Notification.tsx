@@ -25,7 +25,7 @@ const NotificationIcon = component$<{
 const NotificationMessage = component$<{ notification: Notification }>(
   ({ notification }) => {
     let message = notification.message;
-    const { created_by, target_user_id } = notification;
+    const { user_id, created_by, target_user_id } = notification;
     const users = useContext(ActivityUsersContext);
 
     switch (notification.notification_type) {
@@ -33,7 +33,11 @@ const NotificationMessage = component$<{ notification: Notification }>(
         message = `${users[created_by].name} invited you to their trip`;
         break;
       case "trip_invite_accepted":
-        message = `${users[target_user_id].name} joined your trip`;
+        if (user_id === target_user_id) {
+          message = `You joined the trip`;
+        } else {
+          message = `${users[target_user_id].name} joined your trip`;
+        }
         break;
       case "trip_invite_declined":
         message = `${users[target_user_id]} declined your invitation`;

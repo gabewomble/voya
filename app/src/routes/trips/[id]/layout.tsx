@@ -40,6 +40,7 @@ export const useInviteUser = routeAction$(async (data, requestEvent) => {
   return response.ok;
 }, zod$(inviteUserInputSchema));
 
+// TODO: reuse useUpdateMemberStatus?
 export const useCancelInviteUser = routeAction$(async (data, requestEvent) => {
   const response = await serverFetch(
     `/trip/${data.tripID}/members`,
@@ -71,4 +72,35 @@ export const useTripData = routeLoader$(async (requestEvent) => {
 
 export const CurrentMemberContext = createContextId<Member | undefined>(
   "CurrentMember",
+);
+
+export const useUpdateMemberStatus = routeAction$(
+  async (data, requestEvent) => {
+    const response = await serverFetch(
+      `/trip/${data.tripID}/members`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          user_id: data.userID,
+          member_status: data.memberStatus,
+        }),
+      },
+      requestEvent,
+    );
+
+    if (!response.ok) {
+      return requestEvent.fail(500, {
+        error: "Failed to update member status",
+      });
+    }
+
+    return response.ok;
+  },
+  zod$(
+    z.object({
+      tripID: z.string().uuid(),
+      userID: z.string().uuid(),
+      memberStatus: memberStatusEnum,
+    }),
+  ),
 );

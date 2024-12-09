@@ -1,6 +1,10 @@
 import { component$, useContextProvider } from "@builder.io/qwik";
 import { Link, type DocumentHead } from "@builder.io/qwik-city";
-import { CurrentMemberContext, useTripData } from "./layout";
+import {
+  CurrentMemberContext,
+  useTripData,
+  useUpdateMemberStatus,
+} from "./layout";
 import { Card, CardTitle } from "~/components";
 import { Members } from "./Members";
 import { useUserData } from "~/routes/layout";
@@ -10,12 +14,15 @@ export default component$(() => {
   const data = useTripData();
   const currentUser = useUserData().value;
   const { trip, members } = data.value;
-  const currentMember = members.find((member) => member.id === currentUser?.id);
+  const currentMember = members.find(
+    (member) => member.id === currentUser?.id,
+  )!;
 
   useContextProvider(CurrentMemberContext, currentMember);
 
   const canEdit = getCanMemberEdit(currentMember);
-  const isPending = currentMember?.member_status === "pending";
+  const isPending = currentMember.member_status === "pending";
+  const updateMemberStatus = useUpdateMemberStatus();
 
   return (
     <div class="container mx-auto flex flex-col gap-8 py-8">
@@ -36,10 +43,28 @@ export default component$(() => {
           )}
           {isPending && (
             <>
-              <button class="btn btn-outline btn-secondary btn-sm">
+              <button
+                class="btn btn-outline btn-secondary btn-sm"
+                onClick$={() => {
+                  updateMemberStatus.submit({
+                    tripID: trip.id,
+                    userID: currentMember.id,
+                    memberStatus: "declined",
+                  });
+                }}
+              >
                 Decline invite
               </button>
-              <button class="btn btn-outline btn-primary btn-sm">
+              <button
+                class="btn btn-outline btn-primary btn-sm"
+                onClick$={() => {
+                  updateMemberStatus.submit({
+                    tripID: trip.id,
+                    userID: currentMember.id,
+                    memberStatus: "accepted",
+                  });
+                }}
+              >
                 Join this trip
               </button>
             </>

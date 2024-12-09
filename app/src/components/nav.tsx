@@ -46,9 +46,9 @@ export const Nav = component$(() => {
                     {unreadActivityCount}
                   </span>
                 )}
-                <Link class="link-hover link p-1" href="/activity">
+                <a class="link-hover link p-1" href="/activity">
                   Activity
-                </Link>
+                </a>
               </div>
               <Link class="link-hover link p-1" href="/trips">
                 My Trips
