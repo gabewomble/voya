@@ -5,7 +5,7 @@ import {
   useTripData,
   useUpdateMemberStatus,
 } from "./layout";
-import { Card, CardTitle } from "~/components";
+import { Breadcrumbs, Card, CardTitle } from "~/components";
 import { Members } from "./Members";
 import { useUserData } from "~/routes/layout";
 import { getCanMemberEdit } from "~/helpers/members";
@@ -27,6 +27,9 @@ export default component$(() => {
 
   return (
     <div class="container mx-auto flex flex-col gap-8 py-8">
+      <Breadcrumbs
+        crumbs={[{ text: "Trips", path: "/trips" }, { text: trip.name }]}
+      />
       <Card>
         <CardTitle level={1}>{trip.name}</CardTitle>
         <p class="py-4">{trip.description}</p>
