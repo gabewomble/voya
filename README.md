@@ -6,3 +6,7 @@ To learn more about each application, visit the README files in their respective
 
 - [app README](./app/README.md)
 - [server README](./server/README.md)
+
+## Update
+
+This repo hosts the source code for the Voya application, which was a group trip planning application I was building with Go and Qwikjs. I got bored of the project, so I'm leaving it as is.
